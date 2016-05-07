@@ -1,7 +1,6 @@
 import socket
 import threading
 from queue import Queue
-import os
 
 
 port_list = [x for x in range(1, 65536)]
@@ -28,7 +27,15 @@ def port_scan(target, port):
     return flag
 
 
-def worker(target):
+def producer():
+    while True:
+        try:
+            work_queue.put(port_list.pop(0))
+        except IndexError:
+            break
+
+
+def consumer(target):
     while work_queue.empty() is False:
         port = work_queue.get()
         try:
@@ -44,12 +51,12 @@ def worker(target):
 if __name__ == "__main__":
     target_host = input("input the host:\n")
     work_queue = Queue()
-    for element in port_list:
-        work_queue.put(element)
-    threads = [threading.Thread(target=worker, args=(target_host,)) for i in range(16)]
-    for t in threads:
+    producer_thread = threading.Thread(target=producer)
+    producer_thread.start()
+    consumer_threads = []
+    for i in range(16):
+        consumer_threads.append(threading.Thread(target=consumer, args=(target_host,)))
+    for t in consumer_threads:
         t.setDaemon(True)
         t.start()
     work_queue.join()
-    os.system("pause")
- 
