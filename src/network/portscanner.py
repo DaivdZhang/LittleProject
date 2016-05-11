@@ -1,17 +1,17 @@
 import socket
 import threading
+from multiprocessing import Pool
 from queue import Queue
-
-
-port_list = [x for x in range(1, 65536)]
+import os
+import time
 
 
 def port_scan(target, port):
     flag = 0
     s_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s_tcp.settimeout(4)
-    s_udp.settimeout(4)
+    s_tcp.settimeout(2)
+    s_udp.settimeout(2)
     try:
         s_tcp.connect((target, port))
         s_tcp.close()
@@ -27,17 +27,17 @@ def port_scan(target, port):
     return flag
 
 
-def producer():
+def producer(q, ports):
     while True:
         try:
-            work_queue.put(port_list.pop(0))
+            q.put(ports.pop(0))
         except IndexError:
             break
 
 
-def consumer(target):
-    while work_queue.empty() is False:
-        port = work_queue.get()
+def consumer(target, q):
+    while q.empty() is False:
+        port = q.get()
         try:
             flag = port_scan(target, port)
         finally:
@@ -45,18 +45,37 @@ def consumer(target):
                 print("%s:%s tcp" % (target, port), "is open")
             elif flag == 3:
                 print("%s:%s tcp/udp" % (target, port), "is open")
-            work_queue.task_done()
+            q.task_done()
 
 
-if __name__ == "__main__":
-    target_host = input("input the host:\n")
+def work(port_list, target, cpus):
+    # put the data into the queue
     work_queue = Queue()
-    producer_thread = threading.Thread(target=producer)
-    producer_thread.start()
-    consumer_threads = []
-    for i in range(16):
-        consumer_threads.append(threading.Thread(target=consumer, args=(target_host,)))
-    for t in consumer_threads:
+    producer(q=work_queue, ports=port_list)
+    # create thread pool according to the number of cpus
+    threads = []
+    for i in range(1, cpus+1):
+        threads.append(threading.Thread(target=consumer, args=(target, work_queue)))
+    for t in threads:
         t.setDaemon(True)
         t.start()
     work_queue.join()
+
+
+if __name__ == "__main__":
+    target_host = input("input the host>")
+    cpu_num = os.cpu_count()
+    task = [x for x in range(1, 1024)]
+    temp = []
+    n = len(task)//cpu_num+1
+    for j in range(cpu_num):
+        temp.append(task[j*n:(j+1)*n])
+    # create the process pool
+    process_pool = Pool(cpu_num)
+    for j in range(1, cpu_num+1):
+        process_pool.apply_async(func=work, args=(temp.pop(0), target_host, cpu_num))
+    process_pool.close()
+    t0 = time.time()
+    process_pool.join()
+    t1 = time.time()
+    print("cost %.3fs" % (t1-t0))
