@@ -27,7 +27,7 @@ def port_scan(target, port):
     return flag
 
 
-def producer(q, ports):
+def data_producer(q, ports):
     while True:
         try:
             q.put(ports.pop(0))
@@ -35,7 +35,7 @@ def producer(q, ports):
             break
 
 
-def consumer(target, q):
+def data_consumer(target, q):
     while q.empty() is False:
         port = q.get()
         try:
