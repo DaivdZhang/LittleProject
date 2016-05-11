@@ -63,7 +63,13 @@ def work(port_list, target, cpus):
 
 
 if __name__ == "__main__":
+    print("###################")
+    print("##   PORT SCAN   ##")
+    print("###################")
+    print("-------------------")
+    
     target_host = input("input the host>")
+    
     cpu_num = os.cpu_count()
     task = [x for x in range(1, 1024)]
     task2 = [1080, 1109, 1149, 1236, 1300, 1433, 1434, 1494, 1512, 1524, 1525, 1526, 1645, 1646, 1649, 1701, 1718,
@@ -77,6 +83,7 @@ if __name__ == "__main__":
     n = len(task)//cpu_num+1
     for j in range(cpu_num):
         temp.append(task[j*n:(j+1)*n])
+    
     # create the process pool
     process_pool = Pool(cpu_num)
     for j in range(1, cpu_num+1):
