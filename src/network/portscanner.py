@@ -51,11 +51,11 @@ def data_consumer(target, q):
 def work(port_list, target, cpus):
     # put the data into the queue
     work_queue = Queue()
-    producer(q=work_queue, ports=port_list)
+    data_producer(q=work_queue, ports=port_list)
     # create thread pool according to the number of cpus
     threads = []
     for i in range(1, cpus+1):
-        threads.append(threading.Thread(target=consumer, args=(target, work_queue)))
+        threads.append(threading.Thread(target=data_consumer, args=(target, work_queue)))
     for t in threads:
         t.setDaemon(True)
         t.start()
