@@ -99,7 +99,7 @@ def extended_euclid(a, b):
 
 def key_generator():
     rsa_p, rsa_q = prime_num_produce()
-    rsa_n = rsa_q*rsa_p
+    rsa_n = rsa_q * rsa_p
     phi_n = (rsa_p-1) * (rsa_q-1)
     rsa_e = produce_e(phi_n)
     rsa_d = extended_euclid(rsa_e, phi_n)
