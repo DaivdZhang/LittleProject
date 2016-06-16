@@ -56,9 +56,9 @@ def prime_test(n, test=(2, 3, 5, 13, 127, 499)):
 
 def prime_num_produce():
     random.seed(time.time())
-    prime_num = set([])
+    prime_num = set()
     while len(prime_num) != 2:
-        n = random.randint(2**511, 2**512)
+        n = random.randint(2**1023, 2**1024)
         if n % 2 == 0:
             n += 1
         if prime_test(n) is True:
