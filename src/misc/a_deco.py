@@ -7,6 +7,7 @@ def trace(func):
     """
     A trace decorator
     from: https://zhuanlan.zhihu.com/p/20175869
+          https://wiki.python.org/moin/PythonDecoratorLibrary#Line_Tracing_Individual_Functions
 
     :param func:
     :return:
