@@ -28,14 +28,14 @@ class Matrix(object):
         return Matrix(result)
 
     def __mul__(self, other):
+        result = []
+
         def n_mul(mat, n):
-            result = []
             for i in range(mat.get_shape()[0]):
-                result.append([n * x for x in mat.array[i]])
+                result.append([n*x for x in mat.array[i]])
             return result
 
         def m_mul(mat1, mat2):
-            result = []
             if mat1.shape[1] != mat2.shape[0]:
                 raise IndexError
 
@@ -108,9 +108,12 @@ class Matrix(object):
             for i in range(j+1, mat.shape[0]):
                 k = array[i][j]/array[j][j]
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
-        tmp = Matrix(array)
-        main_diagonal = map(lambda x: tmp.get(x, x), [row for row in range(mat.shape[0])])
+        main_diagonal = [array[i][i] for i in range(mat.shape[0])]
         return reduce(lambda x, y: x*y, main_diagonal)
+
+    @staticmethod
+    def trace(mat):
+        return reduce(lambda x, y: x+y, [mat.array[i][i] for i in range(mat.shape[0])])
 
     def get_shape(self):
         if self.array:
@@ -140,7 +143,7 @@ class Matrix(object):
             mat.array[i] = list(map(lambda x: x + random.random(), mat.array[i]))
         return mat
 
-    def get(self, row, col):
+    def get(self, row=-1, col=-1):
         if row >= self.shape[0] or col >= self.shape[1]:
             raise IndexError
         return self.array[row][col]
@@ -148,10 +151,10 @@ class Matrix(object):
     def mprint(self):
         for i in range(self.shape[0]):
             if i == 0:
-                print('[')
+                print('[', end='')
                 print(self.array[i])
             elif i == self.shape[0] - 1:
-                print(self.array[i])
+                print(self.array[i], end='')
                 print(']')
             else:
                 print(self.array[i])
