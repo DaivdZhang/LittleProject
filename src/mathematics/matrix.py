@@ -1,6 +1,7 @@
 import random
 import time
 from functools import reduce
+from copy import copy, deepcopy
 
 
 class Matrix(object):
@@ -69,19 +70,46 @@ class Matrix(object):
         t_array = [[row[j] for row in self.array] for j in range(self.shape[1])]
         return Matrix(t_array)
 
-    def inv(self):  # TODO: finish the inv function
-        if self.shape[0] != self.shape[1]:
+    @staticmethod
+    def inv(mat):
+        if mat.shape[0] != mat.shape[1]:
+            raise IndexError
+        if Matrix.det(mat) == 0:
+            return None
+
+        array = deepcopy(mat.array)
+        e = Matrix.eye(mat.shape[0])
+        for i, row in enumerate(array):
+            row.extend(e.array[i])
+
+        for j in range(mat.shape[0]):
+            for i in range(j+1, mat.shape[0]):
+                k = array[i][j]/array[j][j]
+                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+        for j in range(mat.shape[0]-1, -1, -1):
+            for i in range(j-1, -1, -1):
+                k = array[i][j]/array[j][j]
+                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+        for i in range(mat.shape[0]):
+            if array[i][i] != 1:
+                array[i] = list(map(lambda x: x/array[i][i], array[i]))
+
+        for row in array:
+            del row[0: mat.shape[0]]
+        return Matrix(array)
+
+    @staticmethod
+    def det(mat):
+        array = copy(mat.array)
+        if mat.shape[0] != mat.shape[1]:
             raise IndexError
 
-    def det(self):
-        if self.shape[0] != self.shape[1]:
-            raise IndexError
-
-        for j in range(self.shape[0]):
-            for i in range(j+1, self.shape[0]):
-                k = self.array[i][j]/self.array[j][j]
-                self.array[i] = list(map(lambda x, y: y - k*x, self.array[j], self.array[i]))
-        main_diagonal = map(lambda x: self.get(x, x), [row for row in range(self.shape[0])])
+        for j in range(mat.shape[0]):
+            for i in range(j+1, mat.shape[0]):
+                k = array[i][j]/array[j][j]
+                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+        tmp = Matrix(array)
+        main_diagonal = map(lambda x: tmp.get(x, x), [row for row in range(mat.shape[0])])
         return reduce(lambda x, y: x*y, main_diagonal)
 
     def get_shape(self):
