@@ -2,7 +2,10 @@ import random
 import time
 from functools import reduce
 from copy import copy, deepcopy
-from simplejson import dumps, load
+try:
+    from simplejson import dumps, load
+except ImportError:
+    from json import dumps, load
 
 
 class Matrix(object):
@@ -72,6 +75,32 @@ class Matrix(object):
         return Matrix(t_array)
 
     @staticmethod
+    def _transform(array, row_num, identity=False):
+        count = 0
+        for j in range(row_num):
+            for i in range(j+1, row_num):
+                if not array[j][j]:
+                    _ = [x for x in range(i, row_num) if array[x][j]].pop(0)
+                    array[j], array[_] = array[_], array[j]
+                    count += 1
+                try:
+                    k = array[i][j]/array[j][j]
+                except ZeroDivisionError:
+                    if not sum(array[j]):
+                        return 0, count
+                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+
+        if identity:
+            for j in range(row_num-1, -1, -1):
+                for i in range(j-1, -1, -1):
+                    if not array[j][j]:
+                        _ = [x for x in range(i, row_num) if array[x][j]].pop(0)
+                        array[j], array[i] = array[i], array[j]
+                    k = array[i][j]/array[j][j]
+                    array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+        return array, count
+
+    @staticmethod
     def inv(mat):
         if mat.shape[0] != mat.shape[1]:
             raise IndexError
@@ -83,18 +112,7 @@ class Matrix(object):
         for i, row in enumerate(array):
             row.extend(e.array[i])
 
-        for j in range(mat.shape[0]):
-            for i in range(j+1, mat.shape[0]):
-                if not array[j][j]:
-                    array[j], array[i] = array[i], array[j]
-                k = array[i][j]/array[j][j]
-                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
-        for j in range(mat.shape[0]-1, -1, -1):
-            for i in range(j-1, -1, -1):
-                if not array[j][j]:
-                    array[j], array[i] = array[i], array[j]
-                k = array[i][j]/array[j][j]
-                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+        array = Matrix._transform(array, mat.shape[0], True)[0]
         for i in range(mat.shape[0]):
             if array[i][i] != 1:
                 array[i] = list(map(lambda x: x/array[i][i], array[i]))
@@ -109,18 +127,7 @@ class Matrix(object):
         if mat.shape[0] != mat.shape[1]:
             raise IndexError
 
-        count = 0
-        for j in range(mat.shape[0]-1):
-            for i in range(j+1, mat.shape[0]):
-                if not array[j][j]:
-                    count += 1
-                    array[j], array[i] = array[i], array[j]
-                try:
-                    k = array[i][j]/array[j][j]
-                except ZeroDivisionError:
-                    if not sum(array[j]):
-                        return 0
-                array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
+        array, count = Matrix._transform(array, mat.shape[0])
         main_diagonal = [array[i][i] for i in range(mat.shape[0])]
         return reduce(lambda x, y: x*y, main_diagonal)*(-1)**count
 
