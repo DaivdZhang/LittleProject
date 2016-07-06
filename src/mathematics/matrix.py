@@ -84,10 +84,14 @@ class Matrix(object):
 
         for j in range(mat.shape[0]):
             for i in range(j+1, mat.shape[0]):
+                if not array[j][j]:
+                    array[j], array[i] = array[i], array[j]
                 k = array[i][j]/array[j][j]
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
         for j in range(mat.shape[0]-1, -1, -1):
             for i in range(j-1, -1, -1):
+                if not array[j][j]:
+                    array[j], array[i] = array[i], array[j]
                 k = array[i][j]/array[j][j]
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
         for i in range(mat.shape[0]):
@@ -104,12 +108,20 @@ class Matrix(object):
         if mat.shape[0] != mat.shape[1]:
             raise IndexError
 
-        for j in range(mat.shape[0]):
+        count = 0
+        for j in range(mat.shape[0]-1):
             for i in range(j+1, mat.shape[0]):
-                k = array[i][j]/array[j][j]
+                if not array[j][j]:
+                    count += 1
+                    array[j], array[i] = array[i], array[j]
+                try:
+                    k = array[i][j]/array[j][j]
+                except ZeroDivisionError:
+                    if not sum(array[j]):
+                        return 0
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
         main_diagonal = [array[i][i] for i in range(mat.shape[0])]
-        return reduce(lambda x, y: x*y, main_diagonal)
+        return reduce(lambda x, y: x*y, main_diagonal)*(-1)**count
 
     @staticmethod
     def trace(mat):
