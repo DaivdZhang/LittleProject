@@ -2,6 +2,7 @@ import random
 import time
 from functools import reduce
 from copy import copy, deepcopy
+from simplejson import dumps, load
 
 
 class Matrix(object):
@@ -48,7 +49,7 @@ class Matrix(object):
             temp = []
             mat2 = mat2.t()
             for i in range(mat1.shape[0]):
-                for j in range(mat1.shape[1]):
+                for j in range(mat2.shape[0]):
                     temp += [_mul(mat1.array[i], mat2.array[j])]
                 result.append(temp)
                 temp = []
@@ -166,7 +167,18 @@ class Matrix(object):
                 print('[', end='')
                 print(self.array[i])
             elif i == self.shape[0] - 1:
-                print(self.array[i], end='')
+                print('', self.array[i], end='')
                 print(']')
             else:
-                print(self.array[i])
+                print('', self.array[i])
+
+    @staticmethod
+    def mdump(mat, name="matrix.json"):
+        json = dumps(mat.array, indent='')
+        with open(name, 'w', encoding="UTF-8") as file:
+            file.write(json)
+
+    @staticmethod
+    def mload(filename):
+        with open(filename, 'r', encoding="UTF-8") as file:
+            return Matrix(load(fp=file))
