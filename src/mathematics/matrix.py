@@ -9,6 +9,8 @@ except ImportError:
 
 
 class Matrix(object):
+    __slots__ = ("array", "shape")
+
     def __init__(self, array=None):
         if array is None:
             self.array = []
@@ -145,7 +147,7 @@ class Matrix(object):
     def zero(cls, row=3, col=3):
         array = []
         for y in range(row):
-            array += [[0 for x in range(col)]]
+            array += [[0]*col]
         return cls(array)
 
     @classmethod
