@@ -6,6 +6,7 @@ try:
     from simplejson import dumps, load
 except ImportError:
     from json import dumps, load
+from decimal import Decimal
 
 
 class Matrix(object):
@@ -15,13 +16,25 @@ class Matrix(object):
         if array is None:
             self.array = []
         else:
-            self.array = array
+            self.array = [[Decimal(str(element)) for element in row] for row in array]  # improve the accuracy
         self.shape = self.get_shape()
 
     def __getitem__(self, item):
         return Matrix([[element for element in row[item[1]]] for row in self.array[item[0]]])
 
     def __setitem__(self, key, value):
+        """
+
+        usage:
+            m = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
+            m = [[1.5 2 3]
+                 [4.1 5 6]
+                 [7.7 8 9]]
+            m[0: 1, 0: 1] = [[8.1]]
+            m = [[8.1 2 3]
+                 [4.1 5 6]
+                 [7.7 8 9]] m0[0, 0] changed to 8.1
+        """
         col_range = [key[1].start, key[1].stop]
         if key[1].start is None:
             col_range[0] = 0
@@ -72,7 +85,7 @@ class Matrix(object):
                 return tmp
 
             temp = []
-            mat2 = mat2.t()
+            mat2 = mat2.transpose
             for i in range(mat1.shape[0]):
                 for j in range(mat2.shape[0]):
                     temp.append(_mul(mat1.array[i], mat2.array[j]))
@@ -218,9 +231,9 @@ class Matrix(object):
             return indexes[0]
 
     @staticmethod
-    def mdump(mat, name="matrix.json"):
+    def mdump(mat, filename="matrix.json"):
         json = dumps(mat.array, indent='')
-        with open(name, 'w', encoding="UTF-8") as file:
+        with open(filename, 'w', encoding="UTF-8") as file:
             file.write(json)
 
     @staticmethod
