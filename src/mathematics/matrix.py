@@ -21,8 +21,18 @@ class Matrix(object):
     def __getitem__(self, item):
         return Matrix([[element for element in row[item[1]]] for row in self.array[item[0]]])
 
-    def __setitem__(self, key, value):  # TODO: finish the function
-        self.array[key[0]][key[1]] = value
+    def __setitem__(self, key, value):
+        col_range = [key[1].start, key[1].stop]
+        if key[1].start is None:
+            col_range[0] = 0
+        if key[1].stop is None:
+            col_range[1] = self.shape[1]
+        array = self.array[key[0]]
+
+        for i, row in enumerate(array):
+            del row[key[1]]
+            for j in range(col_range[0], col_range[1]):
+                row.insert(j, value[i][j])
 
     def __str__(self):
         string = []
@@ -80,6 +90,9 @@ class Matrix(object):
         other *= -1
         return self + other
 
+    def __rmul__(self, other):
+        return self*other
+
     @staticmethod
     def pw_product(mat1, mat2):
         if mat1.shape != mat2.shape:
@@ -94,9 +107,10 @@ class Matrix(object):
             tmp = []
         return Matrix(result)
 
-    def t(self):  # TODO: speed up transpose function
+    @property
+    def transpose(self):
         if not self.array:
-            return []
+            return None
         t_array = [[row[j] for row in self.array] for j in range(self.shape[1])]
         return Matrix(t_array)
 
@@ -146,6 +160,10 @@ class Matrix(object):
             del row[0: mat.shape[0]]
         return Matrix(array)
 
+    @property
+    def solve_i(self):
+        return Matrix.inv(self)
+
     @staticmethod
     def det(mat):
         array = copy(mat.array)
@@ -188,13 +206,16 @@ class Matrix(object):
             mat.array[i] = [element + random.random() for element in mat.array[i]]
         return mat
 
-    def index(self, x):
+    def index(self, x, total=False):
         indexes = []
         for i, row in enumerate(self.array):
             for j, element in enumerate(row):
                 if element == x:
                     indexes.append((i, j))
-        return indexes
+        if total:
+            return indexes
+        else:
+            return indexes[0]
 
     @staticmethod
     def mdump(mat, name="matrix.json"):
@@ -206,3 +227,7 @@ class Matrix(object):
     def mload(filename):
         with open(filename, 'r', encoding="UTF-8") as file:
             return Matrix(load(fp=file))
+
+    # The following is class attributes
+    I = solve_i
+    T = transpose
