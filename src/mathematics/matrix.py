@@ -18,57 +18,81 @@ class Matrix(object):
             self.array = array
         self.shape = self.get_shape()
 
+    def __getitem__(self, item):
+        return Matrix([[element for element in row[item[1]]] for row in self.array[item[0]]])
+
+    def __setitem__(self, key, value):  # TODO: finish the function
+        self.array[key[0]][key[1]] = value
+
+    def __str__(self):
+        string = []
+        for row in self.array:
+            string.append('['+' '.join(map(lambda x: str(x), row))+']')
+        return '[' + '\n '.join(string) + ']'
+
     def __add__(self, other):
         result = []
-        if self.get_shape() != other.get_shape():
+        if self.shape != other.shape:
             raise IndexError
 
-        def _add(list1, list2):
-            list3 = []
-            for j in range(len(list1)):
-                list3 += [list1[j] + list2[j]]
-            return list3
-
-        for i in range(self.shape[0]):
-            result += [_add(self.array[i], other.array[i])]
+        tmp = []
+        for row1, row2 in zip(self.array, other.array):
+            for element1, element2 in zip(row1, row2):
+                tmp.append(element2 + element2)
+            result.append(tmp)
+            tmp = []
         return Matrix(result)
 
     def __mul__(self, other):
         result = []
 
-        def n_mul(mat, n):
-            for i in range(mat.get_shape()[0]):
+        def num_mul(mat, n):
+            for i in range(mat.shape[0]):
                 result.append([n*x for x in mat.array[i]])
             return result
 
-        def m_mul(mat1, mat2):
+        def mat_mul(mat1, mat2):
             if mat1.shape[1] != mat2.shape[0]:
                 raise IndexError
 
             def _mul(list1, list2):
                 tmp = 0
-                for _ in range(len(list1)):
-                    tmp += list1[_] * list2[_]
+                for element1, element2 in zip(list1, list2):
+                    tmp += element1*element2
                 return tmp
 
             temp = []
             mat2 = mat2.t()
             for i in range(mat1.shape[0]):
                 for j in range(mat2.shape[0]):
-                    temp += [_mul(mat1.array[i], mat2.array[j])]
+                    temp.append(_mul(mat1.array[i], mat2.array[j]))
                 result.append(temp)
                 temp = []
             else:
                 return result
 
         if isinstance(other, int) or isinstance(other, float):
-            return Matrix(n_mul(self, other))
+            return Matrix(num_mul(self, other))
         else:
-            return Matrix(m_mul(self, other))
+            return Matrix(mat_mul(self, other))
 
     def __sub__(self, other):
         other *= -1
         return self + other
+
+    @staticmethod
+    def pw_product(mat1, mat2):
+        if mat1.shape != mat2.shape:
+            raise IndexError
+
+        result = []
+        tmp = []
+        for row1, row2 in zip(mat1.array, mat2.array):
+            for element1, element2 in zip(row1, row2):
+                tmp.append(element1*element2)
+            result.append(tmp)
+            tmp = []
+        return Matrix(result)
 
     def t(self):  # TODO: speed up transpose function
         if not self.array:
@@ -77,12 +101,12 @@ class Matrix(object):
         return Matrix(t_array)
 
     @staticmethod
-    def _transform(array, row_num, identity=False):
+    def _transform(array, row, identity=False):
         count = 0
-        for j in range(row_num):
-            for i in range(j+1, row_num):
+        for j in range(row):
+            for i in range(j+1, row):
                 if not array[j][j]:
-                    _ = [x for x in range(i, row_num) if array[x][j]].pop(0)
+                    _ = [x for x in range(i, row) if array[x][j]].pop(0)
                     array[j], array[_] = array[_], array[j]
                     count += 1
                 try:
@@ -93,10 +117,9 @@ class Matrix(object):
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
 
         if identity:
-            for j in range(row_num-1, -1, -1):
+            for j in range(row-1, -1, -1):
                 for i in range(j-1, -1, -1):
                     if not array[j][j]:
-                        _ = [x for x in range(i, row_num) if array[x][j]].pop(0)
                         array[j], array[i] = array[i], array[j]
                     k = array[i][j]/array[j][j]
                     array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
@@ -147,7 +170,7 @@ class Matrix(object):
     def zero(cls, row=3, col=3):
         array = []
         for y in range(row):
-            array += [[0]*col]
+            array.append([0]*col)
         return cls(array)
 
     @classmethod
@@ -162,24 +185,16 @@ class Matrix(object):
         random.seed(time.time())
         mat = cls.zero(row, col)
         for i in range(row):
-            mat.array[i] = list(map(lambda x: x + random.random(), mat.array[i]))
+            mat.array[i] = [element + random.random() for element in mat.array[i]]
         return mat
 
-    def get(self, row=-1, col=-1):
-        if row >= self.shape[0] or col >= self.shape[1]:
-            raise IndexError
-        return self.array[row][col]
-
-    def mprint(self):
-        for i in range(self.shape[0]):
-            if i == 0:
-                print('[', end='')
-                print(self.array[i])
-            elif i == self.shape[0] - 1:
-                print('', self.array[i], end='')
-                print(']')
-            else:
-                print('', self.array[i])
+    def index(self, x):
+        indexes = []
+        for i, row in enumerate(self.array):
+            for j, element in enumerate(row):
+                if element == x:
+                    indexes.append((i, j))
+        return indexes
 
     @staticmethod
     def mdump(mat, name="matrix.json"):
