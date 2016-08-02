@@ -26,28 +26,42 @@ class Matrix(object):
         """
 
         usage:
-            >>>> m = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
+            >>>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
             >>>> m
             [[1.5 2 3]
              [4.1 5 6]
              [7.7 8 9]]
-            >>>> m[0: 1, 0: 1] = [[8.1]]
+            >>>> m[0: 2, 0: 1] = [[8.1], [9.0]]
+            >>>> m
+            [[8.1 2 3]
+             [9.0 5 6]
+             [7.7 8 9]]
+            or
+            >>>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
+            >>>> m
+            [[1.5 2 3]
+             [4.1 5 6]
+             [7.7 8 9]]
+            >>>> m[0, 0] = 8.1
             >>>> m
             [[8.1 2 3]
              [4.1 5 6]
-             [7.7 8 9]]  m0[0, 0] changed to 8.1
+             [7.7 8 9]]
         """
-        col_range = [key[1].start, key[1].stop]
-        if key[1].start is None:
-            col_range[0] = 0
-        if key[1].stop is None:
-            col_range[1] = self.shape[1]
-        array = self.array[key[0]]
+        if isinstance(key[0], int):
+            self.array[key[0]][key[1]] = Decimal(str(value))
+        else:
+            col_range = [key[1].start, key[1].stop]
+            if key[1].start is None:
+                col_range[0] = 0
+            if key[1].stop is None:
+                col_range[1] = self.shape[1]
+            array = self.array[key[0]]
 
-        for i, row in enumerate(array):
-            del row[key[1]]
-            for j in range(col_range[0], col_range[1]):
-                row.insert(j, Decimal(str(value[i][j])))
+            for i, row in enumerate(array):
+                del row[key[1]]
+                for j in range(col_range[0], col_range[1]):
+                    row.insert(j, Decimal(str(value[i][j])))
 
     def __str__(self):
         string = []
@@ -73,6 +87,8 @@ class Matrix(object):
         return -1*self
 
     def __add__(self, other):
+        if not isinstance(other, Matrix):
+            return NotImplemented
         result = []
         if self.shape != other.shape:
             raise IndexError
@@ -150,18 +166,18 @@ class Matrix(object):
         >>>> m0 = Matrix([[1, 2, 3.2], [4, 5, 6], [7, 8, 9]])
         >>>> m0
         [[1 2 3.2]
-        [4 5 6]
-        [7 8 9]]
+         [4 5 6]
+         [7 8 9]]
         >>>> m1 = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
         >>>> m1
         [[1.5 2.3 3]
-        [4.1 5 6]
-        [7.7 8 9]]
+         [4.1 5 6]
+         [7.7 8 9]]
 
         >>>> Matrix.pw_product(m0, m1)
         [[1.5 4.6 9.6]
-        [16.4 25 36]
-        [53.9 64 81]]
+         [16.4 25 36]
+         [53.9 64 81]]
         """
         if mat1.shape != mat2.shape:
             raise IndexError
