@@ -6,18 +6,18 @@ try:
     from simplejson import dumps, load
 except ImportError:
     from json import dumps, load
-from decimal import Decimal
+from decimal import Decimal, getcontext
+
+getcontext().prec = 16
 
 
 class Matrix(object):
-    __slots__ = ("array", "shape")
-
     def __init__(self, array=None):
         if array is None:
-            self.array = []
+            self.array = [[]]
         else:
             self.array = [[Decimal(str(element)) for element in row] for row in array]  # improve the accuracy
-        self.shape = self.get_shape()
+        self.shape = self._get_shape()
 
     def __getitem__(self, item):
         return Matrix([[element for element in row[item[1]]] for row in self.array[item[0]]])
@@ -26,14 +26,16 @@ class Matrix(object):
         """
 
         usage:
-            m = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
-            m = [[1.5 2 3]
-                 [4.1 5 6]
-                 [7.7 8 9]]
-            m[0: 1, 0: 1] = [[8.1]]
-            m = [[8.1 2 3]
-                 [4.1 5 6]
-                 [7.7 8 9]] m0[0, 0] changed to 8.1
+            >>>> m = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
+            >>>> m
+            [[1.5 2 3]
+             [4.1 5 6]
+             [7.7 8 9]]
+            >>>> m[0: 1, 0: 1] = [[8.1]]
+            >>>> m
+            [[8.1 2 3]
+             [4.1 5 6]
+             [7.7 8 9]]  m0[0, 0] changed to 8.1
         """
         col_range = [key[1].start, key[1].stop]
         if key[1].start is None:
@@ -45,13 +47,30 @@ class Matrix(object):
         for i, row in enumerate(array):
             del row[key[1]]
             for j in range(col_range[0], col_range[1]):
-                row.insert(j, value[i][j])
+                row.insert(j, Decimal(str(value[i][j])))
 
     def __str__(self):
         string = []
         for row in self.array:
             string.append('['+' '.join(map(lambda x: str(x), row))+']')
         return '[' + '\n '.join(string) + ']'
+    __repr__ = __str__
+
+    def __eq__(self, other):
+        for row1, row2 in zip(self.array, other.array):
+            if row1 != row2:
+                return False
+        else:
+            return True
+
+    def __ne__(self, other):
+        if self == other:
+            return False
+        else:
+            return True
+
+    def __neg__(self):
+        return -1*self
 
     def __add__(self, other):
         result = []
@@ -61,10 +80,12 @@ class Matrix(object):
         tmp = []
         for row1, row2 in zip(self.array, other.array):
             for element1, element2 in zip(row1, row2):
-                tmp.append(element2 + element2)
+                tmp.append(element1 + element2)
             result.append(tmp)
             tmp = []
         return Matrix(result)
+    __iadd__ = __add__
+    __radd__ = __add__
 
     def __mul__(self, other):
         result = []
@@ -98,16 +119,50 @@ class Matrix(object):
             return Matrix(num_mul(self, other))
         else:
             return Matrix(mat_mul(self, other))
+    __imul__ = __mul__
+    __rmul__ = __mul__
 
     def __sub__(self, other):
-        other *= -1
-        return self + other
+        return self + (-other)
+    __isub__ = __sub__
+    __rsub__ = __sub__
 
-    def __rmul__(self, other):
-        return self*other
+    def __pow__(self, power):
+        if not isinstance(power, int):
+            raise ValueError
+        if self.shape[0] != self.shape[1]:
+            raise IndexError
+
+        m = Matrix.eye(self.shape[0])
+        while power:
+            m = m*self
+            power -= 1
+        return m
+    __ipow__ = __pow__
 
     @staticmethod
     def pw_product(mat1, mat2):
+        """
+        :type mat1: Matrix
+        :type mat2: Matrix
+
+        usage:
+        >>>> m0 = Matrix([[1, 2, 3.2], [4, 5, 6], [7, 8, 9]])
+        >>>> m0
+        [[1 2 3.2]
+        [4 5 6]
+        [7 8 9]]
+        >>>> m1 = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
+        >>>> m1
+        [[1.5 2.3 3]
+        [4.1 5 6]
+        [7.7 8 9]]
+
+        >>>> Matrix.pw_product(m0, m1)
+        [[1.5 4.6 9.6]
+        [16.4 25 36]
+        [53.9 64 81]]
+        """
         if mat1.shape != mat2.shape:
             raise IndexError
 
@@ -191,7 +246,7 @@ class Matrix(object):
     def trace(mat):
         return reduce(lambda x, y: x+y, [mat.array[i][i] for i in range(mat.shape[0])])
 
-    def get_shape(self):
+    def _get_shape(self):
         if self.array:
             return len(self.array), len(self.array[0])
         else:
