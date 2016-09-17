@@ -13,6 +13,9 @@ class Matrix(object):
         if array is None:
             self.array = [[]]
         else:
+            if len(set([len(row) for row in array])) != 1:
+                raise IndexError
+
             self.array = [[element for element in row] for row in array]
         self.shape = self._get_shape()
 
@@ -330,7 +333,6 @@ class Matrix(object):
         >>> m0.reshape((1, 9))
         >>> m0
         [[1 2 3 4 5 6 7 8 9]]
-
         >>> m0.reshape((9, 1))
         >>> m0
         [[1]
@@ -380,10 +382,9 @@ class Matrix(object):
 
     def index(self, x, total=False):
         indexes = []
-        for i, row in enumerate(self.array):
-            for j, element in enumerate(row):
-                if element == x:
-                    indexes.append((i, j))
+        for i, element in enumerate(self):
+            if element == x:
+                indexes.append(divmod(i, 3))
         if total:
             return indexes
         else:
