@@ -6,9 +6,6 @@ try:
     from simplejson import dumps, load
 except ImportError:
     from json import dumps, load
-from decimal import Decimal, getcontext
-
-getcontext().prec = 16
 
 
 class Matrix(object):
@@ -16,7 +13,7 @@ class Matrix(object):
         if array is None:
             self.array = [[]]
         else:
-            self.array = [[Decimal(str(element)) for element in row] for row in array]  # improve the accuracy
+            self.array = [[element for element in row] for row in array]
         self.shape = self._get_shape()
 
     def __getitem__(self, item):
@@ -49,7 +46,7 @@ class Matrix(object):
              [7.7 8 9]]
         """
         if isinstance(key[0], int):
-            self.array[key[0]][key[1]] = Decimal(str(value))
+            self.array[key[0]][key[1]] = value
         else:
             col_range = [key[1].start, key[1].stop]
             if key[1].start is None:
@@ -61,14 +58,64 @@ class Matrix(object):
             for i, row in enumerate(array):
                 del row[key[1]]
                 for j in range(col_range[0], col_range[1]):
-                    row.insert(j, Decimal(str(value[i][j])))
+                    row.insert(j, value[i][j])
+
+    def __contains__(self, item):
+        for row in self.array:
+            if item in row:
+                return True
+        else:
+            return False
+
+    def __iter__(self):
+        self._i = 0
+        self._j = 0
+        return self
+
+    def __next__(self):
+        """
+
+        >>>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>>> for i in m0:
+        ...     print(i)
+        ...
+        1
+        2
+        3
+        4
+        5
+        6
+        7
+        8
+        """
+        if (self._i+1, self._j+1) == self.shape:
+            raise StopIteration
+
+        element = self.array[self._i][self._j]
+        self._j += 1
+        if self._j == self.shape[1]:
+            self._j = 0
+            self._i += 1
+
+        return element
 
     def __str__(self):
         string = []
-        for row in self.array:
-            string.append('['+' '.join(map(lambda x: str(x), row))+']')
-        return '[' + '\n '.join(string) + ']'
+        for i, row in enumerate(self.array):
+            if self.shape[0] > 128 and 8 < i < self.shape[0] - 8:
+                continue
+            elif self.shape[0] > 128 and i == self.shape[0] - 8:
+                string.append(".....")
+            else:
+                string.append('['+' '.join(map(lambda x: str(x), row))+']')
+        return '[' + "\n ".join(string) + ']'
     __repr__ = __str__
+
+    def __bool__(self):
+        if self.array != [[]]:
+            return True
+        else:
+            return False
 
     def __eq__(self, other):
         for row1, row2 in zip(self.array, other.array):
