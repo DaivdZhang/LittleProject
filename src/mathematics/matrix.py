@@ -23,28 +23,29 @@ class Matrix(object):
         """
 
         usage:
-            >>>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
-            >>>> m
+            >>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
+            >>> m
             [[1.5 2 3]
              [4.1 5 6]
              [7.7 8 9]]
-            >>>> m[0: 2, 0: 1] = [[8.1], [9.0]]
-            >>>> m
+            >>> m[0: 2, 0: 1] = [[8.1], [9.0]]
+            >>> m
             [[8.1 2 3]
              [9.0 5 6]
              [7.7 8 9]]
             or
-            >>>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
-            >>>> m
+            >>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
+            >>> m
             [[1.5 2 3]
              [4.1 5 6]
              [7.7 8 9]]
-            >>>> m[0, 0] = 8.1
-            >>>> m
+            >>> m[0, 0] = 8.1
+            >>> m
             [[8.1 2 3]
              [4.1 5 6]
              [7.7 8 9]]
         """
+
         if isinstance(key[0], int):
             self.array[key[0]][key[1]] = value
         else:
@@ -75,8 +76,8 @@ class Matrix(object):
     def __next__(self):
         """
 
-        >>>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-        >>>> for i in m0:
+        >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> for i in m0:
         ...     print(i)
         ...
         1
@@ -87,8 +88,10 @@ class Matrix(object):
         6
         7
         8
+        9
         """
-        if (self._i+1, self._j+1) == self.shape:
+
+        if self._i == self.shape[0]:
             raise StopIteration
 
         element = self.array[self._i][self._j]
@@ -198,7 +201,7 @@ class Matrix(object):
 
         m = Matrix.eye(self.shape[0])
         while power:
-            m = m*self
+            m *= self
             power -= 1
         return m
     __ipow__ = __pow__
@@ -210,22 +213,23 @@ class Matrix(object):
         :type mat2: Matrix
 
         usage:
-        >>>> m0 = Matrix([[1, 2, 3.2], [4, 5, 6], [7, 8, 9]])
-        >>>> m0
+        >>> m0 = Matrix([[1, 2, 3.2], [4, 5, 6], [7, 8, 9]])
+        >>> m0
         [[1 2 3.2]
          [4 5 6]
          [7 8 9]]
-        >>>> m1 = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
-        >>>> m1
+        >>> m1 = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
+        >>> m1
         [[1.5 2.3 3]
          [4.1 5 6]
          [7.7 8 9]]
 
-        >>>> Matrix.pw_product(m0, m1)
+        >>> Matrix.pw_product(m0, m1)
         [[1.5 4.6 9.6]
          [16.4 25 36]
          [53.9 64 81]]
         """
+
         if mat1.shape != mat2.shape:
             raise IndexError
 
@@ -305,15 +309,52 @@ class Matrix(object):
         main_diagonal = [array[i][i] for i in range(mat.shape[0])]
         return reduce(lambda x, y: x*y, main_diagonal)*(-1)**count
 
-    @staticmethod
-    def trace(mat):
-        return reduce(lambda x, y: x+y, [mat.array[i][i] for i in range(mat.shape[0])])
+    @property
+    def trace(self):
+        if self.shape[0] != self.shape[1]:
+            raise IndexError
+        return reduce(lambda x, y: x+y, [self.array[i][i] for i in range(self.shape[0])])
 
     def _get_shape(self):
         if self.array:
             return len(self.array), len(self.array[0])
         else:
             return None
+
+    def reshape(self, shape):
+        """
+
+        :type shape: tuple
+
+        >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> m0.reshape((1, 9))
+        >>> m0
+        [[1 2 3 4 5 6 7 8 9]]
+
+        >>> m0.reshape((9, 1))
+        >>> m0
+        [[1]
+         [2]
+         [3]
+         [4]
+         [5]
+         [6]
+         [7]
+         [8]
+         [9]]
+        """
+
+        if self.shape[0]*self.shape[1] != shape[0]*shape[1]:
+            raise IndexError
+
+        new_array = []
+        tmp = []
+        for i, element in enumerate(self):
+            tmp.append(element)
+            if (i+1) % shape[1] == 0:
+                new_array.append(tmp)
+                tmp = []
+        self.array = new_array
 
     @classmethod
     def zero(cls, row=3, col=3):
