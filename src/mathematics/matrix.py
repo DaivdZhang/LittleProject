@@ -15,8 +15,8 @@ class Matrix(object):
         else:
             if len(set([len(row) for row in array])) != 1:
                 raise IndexError
-
             self.array = [[element for element in row] for row in array]
+
         self.shape = self._get_shape()
 
     def __getitem__(self, item):
@@ -111,7 +111,7 @@ class Matrix(object):
             if self.shape[0] > 128 and 8 < i < self.shape[0] - 8:
                 continue
             elif self.shape[0] > 128 and i == self.shape[0] - 8:
-                string.append(".....")
+                string.append("......")
             else:
                 string.append('['+' '.join(map(lambda x: str(x), row))+']')
         return '[' + "\n ".join(string) + ']'
@@ -212,8 +212,8 @@ class Matrix(object):
     @staticmethod
     def pw_product(mat1, mat2):
         """
-        :type mat1: Matrix
-        :type mat2: Matrix
+        :type mat1: matrix.Matrix
+        :type mat2: matrix.Matrix
 
         usage:
         >>> m0 = Matrix([[1, 2, 3.2], [4, 5, 6], [7, 8, 9]])
@@ -247,6 +247,10 @@ class Matrix(object):
 
     @property
     def transpose(self):
+        """
+
+        :rtype: matrix.Matrix
+        """
         if not self.array:
             return None
         t_array = [[row[j] for row in self.array] for j in range(self.shape[1])]
@@ -389,6 +393,113 @@ class Matrix(object):
             return indexes
         else:
             return indexes[0]
+
+    def max(self, axis=None):
+        """
+        :type axis: int
+
+        >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> m0.max()
+        9
+        >>> m0.max(0)
+        [[3]
+         [6]
+         [9]]
+        >>> m0.max(1)
+        [[7 8 9]]
+        """
+
+        if axis == 0:
+            return Matrix([[max(row) for row in self.array]]).T
+        elif axis == 1:
+            return Matrix([[max(row) for row in self.transpose.array]])
+        else:
+            return max(self)
+
+    def min(self, axis=None):
+        """
+
+        :type axis: int
+
+        >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> m0.min()
+        1
+        >>> m0.min(0)
+        [[1]
+         [4]
+         [7]]
+        >>> m0.min(1)
+        [[1 2 3]]
+        """
+        if axis == 0:
+            return Matrix([[min(row) for row in self.array]]).T
+        elif axis == 1:
+            return Matrix([[min(row) for row in self.transpose.array]])
+        else:
+            return min(self)
+
+    def mean(self, axis=None):
+        """
+
+        :type axis: int
+
+        >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> m0.mean()
+        5.0
+        >>> m0.mean(0)
+        [[2.0]
+         [5.0]
+         [8.0]]
+        >>> m0.mean(1)
+        [[4.0 5.0 6.0]]
+        """
+
+        element_num = self.shape[0]*self.shape[1]
+        if axis == 0:
+            return Matrix([[sum(row)/self.shape[1] for row in self.array]]).T
+        elif axis == 1:
+            return Matrix([[sum(row)/self.shape[0] for row in self.transpose.array]])
+        else:
+            return sum([sum(row) for row in self.array])/element_num
+
+    def var(self, axis=None):
+        """
+
+        :type axis: int
+
+        >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> m0.var()
+        6.666666666666667
+        >>> m0.var(0)
+        [[0.6666666666666666]
+         [0.6666666666666666]
+         [0.6666666666666666]]
+        >>> m0.var(1)
+        [[6.0 6.0 6.0]]
+        """
+
+        if axis == 0:
+            return Matrix([[Matrix([row]).var() for row in self.array]]).T
+        elif axis == 1:
+            return self.transpose.var(0).T
+        else:
+            average = self.mean()
+            return Matrix([[(x - average)**2 for x in self]]).mean()
+
+    def std(self, axis=None):
+        """
+
+        :type axis: int
+
+        m0.std() is equal to m0.var()**0.5
+        """
+
+        if axis is None:
+            return self.var(axis)**0.5
+        elif axis == 0:
+            return Matrix([[x**0.5 for x in self.var(axis)]]).T
+        else:
+            return Matrix([[x**0.5 for x in self.var(axis)]])
 
     @staticmethod
     def mdump(mat, filename="matrix.json"):
