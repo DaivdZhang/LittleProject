@@ -36,7 +36,7 @@ class Matrix(object):
             [[8.1 2 3]
              [9.0 5 6]
              [7.7 8 9]]
-            or
+
             >>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
             >>> m
             [[1.5 2 3]
@@ -139,6 +139,10 @@ class Matrix(object):
     def __neg__(self):
         return -1*self
 
+    def __abs__(self):
+        self.array = [[abs(element) for element in row] for row in self.array]
+        return self
+
     def __add__(self, other):
         if not isinstance(other, Matrix):
             return NotImplemented
@@ -216,9 +220,9 @@ class Matrix(object):
         :type mat2: matrix.Matrix
 
         usage:
-        >>> m0 = Matrix([[1, 2, 3.2], [4, 5, 6], [7, 8, 9]])
+        >>> m0 = Matrix([[1, 2, 3.1], [4, 5, 6], [7, 8, 9]])
         >>> m0
-        [[1 2 3.2]
+        [[1 2 3.1]
          [4 5 6]
          [7 8 9]]
         >>> m1 = Matrix([[1.5, 2.3, 3], [4.1, 5, 6], [7.7, 8, 9]])
@@ -228,7 +232,7 @@ class Matrix(object):
          [7.7 8 9]]
 
         >>> Matrix.pw_product(m0, m1)
-        [[1.5 4.6 9.6]
+        [[1.5 4.6 9.3]
          [16.4 25 36]
          [53.9 64 81]]
         """
@@ -323,7 +327,7 @@ class Matrix(object):
         return reduce(lambda x, y: x+y, [self.array[i][i] for i in range(self.shape[0])])
 
     def _get_shape(self):
-        if self.array:
+        if self:
             return len(self.array), len(self.array[0])
         else:
             return None
@@ -348,6 +352,11 @@ class Matrix(object):
          [7]
          [8]
          [9]]
+         >>> m0.reshape((3, 3))
+         >>> m0
+         [[1 2 3]
+          [4 5 6]
+          [7 8 9]]
         """
 
         if self.shape[0]*self.shape[1] != shape[0]*shape[1]:
@@ -361,6 +370,8 @@ class Matrix(object):
                 new_array.append(tmp)
                 tmp = []
         self.array = new_array
+        self.shape = self._get_shape()
+        # return self if unittest needed
 
     @classmethod
     def zero(cls, row=3, col=3):
@@ -393,6 +404,14 @@ class Matrix(object):
             return indexes
         else:
             return indexes[0]
+
+    def get(self, index):
+        """
+
+        :type index: tuple
+        """
+
+        return self.array[index[0]][index[1]]
 
     def max(self, axis=None):
         """
