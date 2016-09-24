@@ -20,7 +20,7 @@ class Fraction(object):
         self.denominator = denominator//x
         if self.numerator < 0 and self.denominator < 0:
             self.numerator = -self.numerator
-            self.denominator = self.denominator
+            self.denominator = -self.denominator
         elif self.denominator < 0 < self.numerator:
             self.numerator = -self.numerator
             self.denominator = -self.denominator
