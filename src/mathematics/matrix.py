@@ -20,7 +20,11 @@ class Matrix(object):
         self.shape = self._get_shape()
 
     def __getitem__(self, item):
-        return Matrix([[element for element in row[item[1]]] for row in self.array[item[0]]])
+        if isinstance(item[0], int):
+            return self.get(item)
+        else:
+            array = [[element for element in row[item[1]]] for row in self.array[item[0]]]
+            return Matrix(array)
 
     def __setitem__(self, key, value):
         """
@@ -72,8 +76,8 @@ class Matrix(object):
             return False
 
     def __iter__(self):
-        self._i = 0
-        self._j = 0
+        self.__i = 0
+        self.__j = 0
         return self
 
     def __next__(self):
@@ -94,14 +98,14 @@ class Matrix(object):
         9
         """
 
-        if self._i == self.shape[0]:
+        if self.__i == self.shape[0]:
             raise StopIteration
 
-        element = self.array[self._i][self._j]
-        self._j += 1
-        if self._j == self.shape[1]:
-            self._j = 0
-            self._i += 1
+        element = self.array[self.__i][self.__j]
+        self.__j += 1
+        if self.__j == self.shape[1]:
+            self.__j = 0
+            self.__i += 1
 
         return element
 
@@ -114,7 +118,7 @@ class Matrix(object):
                 string.append("......")
             else:
                 string.append('['+' '.join(map(lambda x: str(x), row))+']')
-        return '[' + "\n ".join(string) + ']'
+        return '[' + "\n ".join(string) + "]\n"
     __repr__ = __str__
 
     def __bool__(self):
@@ -140,8 +144,8 @@ class Matrix(object):
         return -1*self
 
     def __abs__(self):
-        self.array = [[abs(element) for element in row] for row in self.array]
-        return self
+        array = [[abs(element) for element in row] for row in self.array]
+        return Matrix(array)
 
     def __add__(self, other):
         if not isinstance(other, Matrix):
@@ -188,7 +192,7 @@ class Matrix(object):
             else:
                 return result
 
-        if isinstance(other, int) or isinstance(other, float):
+        if isinstance(other, (int, float)):
             return Matrix(num_mul(self, other))
         else:
             return Matrix(mat_mul(self, other))
@@ -207,11 +211,33 @@ class Matrix(object):
             raise IndexError
 
         m = Matrix.eye(self.shape[0])
-        while power:
+        for i in range(power):
             m *= self
-            power -= 1
         return m
     __ipow__ = __pow__
+
+    def __copy__(self):
+        cls = self.__class__
+        new_mat = cls()
+        new_mat.__dict__.update(self.__dict__)
+        return new_mat
+
+    def __deepcopy__(self, memodict=None):
+        if memodict is None:
+            memodict = {}
+
+        cls = self.__class__
+        new_mat = cls()
+        memodict[id(self)] = new_mat
+        for key, item in self.__dict__.items():
+            setattr(new_mat, key, deepcopy(item, memodict))
+        return new_mat
+
+    def copy(self):
+        return self.__copy__()
+
+    def deepcopy(self):
+        return self.__deepcopy__()
 
     @staticmethod
     def pw_product(mat1, mat2):
@@ -307,7 +333,7 @@ class Matrix(object):
         return Matrix(array)
 
     @property
-    def solve_i(self):
+    def __solve_i(self):
         return Matrix.inv(self)
 
     @staticmethod
@@ -324,7 +350,7 @@ class Matrix(object):
     def trace(self):
         if self.shape[0] != self.shape[1]:
             raise IndexError
-        return reduce(lambda x, y: x+y, [self.array[i][i] for i in range(self.shape[0])])
+        return sum([row[i] for i, row in enumerate(self.array)])
 
     def _get_shape(self):
         if self:
@@ -532,5 +558,5 @@ class Matrix(object):
             return Matrix(load(fp=file))
 
     # The following is class attributes
-    I = solve_i
+    I = __solve_i
     T = transpose
