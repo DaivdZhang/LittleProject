@@ -40,7 +40,6 @@ class Matrix(object):
             [[8.1 2 3]
              [9.0 5 6]
              [7.7 8 9]]
-
             >>> m = Matrix([[1.5, 2, 3], [4.1, 5, 6], [7.7, 8, 9]])
             >>> m
             [[1.5 2 3]
@@ -112,14 +111,22 @@ class Matrix(object):
     def __str__(self):
         string = []
         for i, row in enumerate(self.array):
-            if self.shape[0] > 128 and 8 < i < self.shape[0] - 8:
+            if self.shape[0] > 64 and 8 < i < self.shape[0] - 8:
                 continue
-            elif self.shape[0] > 128 and i == self.shape[0] - 8:
+            elif self.shape[0] > 64 and i == self.shape[0] - 8:
                 string.append("......")
             else:
-                string.append('['+' '.join(map(lambda x: str(x), row))+']')
+                if self.shape[1] > 64:
+                    a = ' '.join(map(lambda x: str(x), row[0: 4]))
+                    b = ' '.join(map(lambda x: str(x), row[self.shape[1]-4:]))
+                    string.append('[' + a + "......" + b + ']')
+                else:
+                    string.append('[' + ' '.join(map(lambda x: str(x), row))+']')
         return '[' + "\n ".join(string) + "]\n"
-    __repr__ = __str__
+
+    def __repr__(self):
+        tmp = str(self)
+        return tmp[: len(tmp)-1]
 
     def __bool__(self):
         if self.array != [[]]:
@@ -139,6 +146,9 @@ class Matrix(object):
             return False
         else:
             return True
+
+    def __pos__(self):
+        return self
 
     def __neg__(self):
         return -1*self
@@ -192,10 +202,10 @@ class Matrix(object):
             else:
                 return result
 
-        if isinstance(other, (int, float)):
-            return Matrix(num_mul(self, other))
-        else:
+        if isinstance(other, Matrix):
             return Matrix(mat_mul(self, other))
+        else:
+            return Matrix(num_mul(self, other))
     __imul__ = __mul__
     __rmul__ = __mul__
 
@@ -242,8 +252,8 @@ class Matrix(object):
     @staticmethod
     def pw_product(mat1, mat2):
         """
-        :type mat1: matrix.Matrix
-        :type mat2: matrix.Matrix
+        :type mat1: Matrix
+        :type mat2: Matrix
 
         usage:
         >>> m0 = Matrix([[1, 2, 3.1], [4, 5, 6], [7, 8, 9]])
@@ -256,7 +266,6 @@ class Matrix(object):
         [[1.5 2.3 3]
          [4.1 5 6]
          [7.7 8 9]]
-
         >>> Matrix.pw_product(m0, m1)
         [[1.5 4.6 9.3]
          [16.4 25 36]
@@ -279,8 +288,9 @@ class Matrix(object):
     def transpose(self):
         """
 
-        :rtype: matrix.Matrix
+        :rtype: Matrix
         """
+
         if not self.array:
             return None
         t_array = [[row[j] for row in self.array] for j in range(self.shape[1])]
@@ -298,7 +308,7 @@ class Matrix(object):
                 try:
                     k = array[i][j]/array[j][j]
                 except ZeroDivisionError:
-                    if not sum(array[j]):
+                    if len(set(array[j])) == 1:
                         return 0, count
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
 
@@ -317,6 +327,8 @@ class Matrix(object):
             raise IndexError
         if Matrix.det(mat) == 0:
             return None
+        if not mat:
+            return mat
 
         array = deepcopy(mat.array)
         e = Matrix.eye(mat.shape[0])
@@ -341,6 +353,8 @@ class Matrix(object):
         array = copy(mat.array)
         if mat.shape[0] != mat.shape[1]:
             raise IndexError
+        if mat.shape[0] == mat.shape[1] == 0:
+            return 1
 
         array, count = Matrix._transform(array, mat.shape[0])
         main_diagonal = [array[i][i] for i in range(mat.shape[0])]
@@ -352,11 +366,23 @@ class Matrix(object):
             raise IndexError
         return sum([row[i] for i, row in enumerate(self.array)])
 
+    @property
+    def rank(self):
+        if self.shape[0] != self.shape[1]:
+            raise IndexError
+
+        array = Matrix._transform(self.array, self.shape[0])[0]
+        count = 0
+        for row in array:
+            if len(set(row)) > 1:
+                count += 1
+        return count
+
     def _get_shape(self):
         if self:
             return len(self.array), len(self.array[0])
         else:
-            return None
+            return 0, 0
 
     def reshape(self, shape):
         """
@@ -476,6 +502,7 @@ class Matrix(object):
         >>> m0.min(1)
         [[1 2 3]]
         """
+
         if axis == 0:
             return Matrix([[min(row) for row in self.array]]).T
         elif axis == 1:
