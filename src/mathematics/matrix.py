@@ -20,6 +20,20 @@ class Matrix(object):
         self.shape = self._get_shape()
 
     def __getitem__(self, item):
+        """
+
+        >>> m = Matrix([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        >>> m
+        [[1.0 2.0]
+         [3.0 4.0]
+         [5.0 6.0]]
+        >>> m[0: 2, :]
+        [[1.0 2.0]
+         [3.0 4.0]]
+        >>> m[2, 1]
+        6.0
+        """
+
         if isinstance(item[0], int):
             return self.get(item)
         else:
@@ -425,6 +439,66 @@ class Matrix(object):
         self.shape = self._get_shape()
         # return self if unittest needed
 
+    def fill(self, value):
+        """
+
+        >>> m = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> m
+        [[1 2 3]
+         [4 5 6]
+         [7 8 9]]
+        >>> m.fill(-1)
+        >>> m
+        [[-1 -1 -1]
+         [-1 -1 -1]
+         [-1 -1 -1]]
+        """
+        
+        for ind, element in enumerate(self):
+            i, j = divmod(ind, self.shape[1])
+            self.array[i][j] = value
+
+    def repeat(self, repeats, axis):
+        """
+
+        >>> m = Matrix([[1, 2], [4, 5], [7, 8]])
+        >>> m.repeat(2, 0)
+        [[1 2]
+         [1 2]
+         [4 5]
+         [4 5]
+         [7 8]
+         [7 8]]
+        >>> m.repeat(2, 1)
+        [[1 2 1 2]
+         [4 5 4 5]
+         [7 8 7 8]]
+        >>> m.repeat([1, 2, 3], 0)
+        [[1 2]
+         [4 5]
+         [4 5]
+         [7 8]
+         [7 8]
+         [7 8]]
+
+        """
+        
+        if isinstance(repeats, int):
+            repeats = [repeats]*self.shape[0]
+
+        new_arr = []
+        if axis == 0:
+            array = [[row]*i for row, i in zip(self.array, (x for x in repeats))]
+            for row in array:
+                new_arr.extend(row)
+        else:
+            for ind, i in enumerate(repeats):
+                new_arr.append(self.array[ind]*i)
+        mat = Matrix(new_arr)
+        del new_arr
+
+        return mat
+
     @classmethod
     def zero(cls, row=3, col=3):
         array = []
@@ -447,11 +521,37 @@ class Matrix(object):
             mat.array[i] = [element + random.random() for element in mat.array[i]]
         return mat
 
+    @classmethod
+    def from_string(cls, string):
+        """
+        :type string: str
+
+        >>> m = Matrix.from_string("1 2;3 4;5 6")
+        >>> m
+        [[1.0 2.0]
+         [3.0 4.0]
+         [5.0 6.0]]
+        """
+        
+        if string[-1] == ';':
+            string = string[: len(string)-1]
+        if ',' in string:
+            string = string.replace(',', ' ')
+
+        row_string = string.split(';')
+        array = [row.split(' ') for row in row_string]
+
+        def _not_empty(x):
+            return x.strip() and x
+        array = [filter(_not_empty, row) for row in array]
+        array = [[float(x) for x in row] for row in array]
+        return Matrix(array)
+
     def index(self, x, total=False):
         indexes = []
         for i, element in enumerate(self):
             if element == x:
-                indexes.append(divmod(i, 3))
+                indexes.append(divmod(i, self.shape[1]))
         if total:
             return indexes
         else:
@@ -573,9 +673,8 @@ class Matrix(object):
         else:
             return Matrix([[x**0.5 for x in self.var(axis)]])
 
-    @staticmethod
-    def mdump(mat, filename="matrix.json"):
-        json = dumps(mat.array, indent='')
+    def mdump(self, filename):
+        json = dumps(self.array, indent='')
         with open(filename, 'w', encoding="UTF-8") as file:
             file.write(json)
 
