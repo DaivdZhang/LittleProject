@@ -43,10 +43,6 @@ class Fraction(object):
             return True
 
     def __eq__(self, other):
-        """
-
-        :type other: Fraction
-        """
         if self.numerator == other.numerator and self.denominator == other.denominator:
             return True
         else:
@@ -79,7 +75,7 @@ class Fraction(object):
 
         :type other: Fraction
         """
-        if self < other:
+        if self <= other:
             return False
         else:
             return True
@@ -89,7 +85,7 @@ class Fraction(object):
 
         :type other: Fraction
         """
-        if self <= other:
+        if self < other:
             return False
         else:
             return True
