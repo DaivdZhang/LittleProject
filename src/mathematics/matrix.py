@@ -6,16 +6,19 @@ try:
     from simplejson import dumps, load
 except ImportError:
     from json import dumps, load
+import math
+import re
 
 
 class Matrix(object):
-    print_all = False
 
-    def __init__(self, array=None):
-        if array is None:
+    def __init__(self, data=None):
+        if data is None:
             self.array = [[]]
+        elif isinstance(data, str):
+            self.array = Matrix.from_string(data).array
         else:
-            self.array = [[element for element in row] for row in array]
+            self.array = [[element for element in row] for row in data]
             if len(set([len(row) for row in self.array])) != 1:
                 raise IndexError
 
@@ -35,7 +38,6 @@ class Matrix(object):
         >>> m[2, 1]
         6.0
         """
-
         if isinstance(item[0], int):
             return self.get(item)
         else:
@@ -67,7 +69,6 @@ class Matrix(object):
              [4.1 5 6]
              [7.7 8 9]]
         """
-
         if isinstance(key[0], int):
             self.array[key[0]][key[1]] = value
         else:
@@ -112,7 +113,6 @@ class Matrix(object):
         8
         9
         """
-
         if self.__i == self.shape[0]:
             raise StopIteration
 
@@ -168,6 +168,38 @@ class Matrix(object):
         else:
             return True
 
+    def __gt__(self, other):
+        result = []
+        if self.shape == other.shape:
+            for x, y in zip(self, other):
+                if x > y:
+                    result.append(1)
+                else:
+                    result.append(0)
+        else:
+            raise IndexError
+        return Matrix.from_list(result, self.shape)
+
+    def __lt__(self, other):
+        _ = self >= other
+        return Matrix.from_list(map(lambda x: not x, _.flat()), self.shape)
+
+    def __ge__(self, other):
+        result = []
+        if self.shape == other.shape:
+            for x, y in zip(self, other):
+                if x >= y:
+                    result.append(1)
+                else:
+                    result.append(0)
+        else:
+            raise IndexError
+        return Matrix.from_list(result, self.shape)
+
+    def __le__(self, other):
+        _ = self > other
+        return Matrix.from_list(map(lambda x: not x, _.flat()), self.shape)
+
     def __pos__(self):
         return self
 
@@ -180,7 +212,7 @@ class Matrix(object):
 
     def __add__(self, other):
         if not isinstance(other, Matrix):
-            return NotImplemented
+            return Matrix([[element + other for element in row] for row in self.array])
         result = []
         if self.shape != other.shape:
             raise IndexError
@@ -207,21 +239,17 @@ class Matrix(object):
             if mat1.shape[1] != mat2.shape[0]:
                 raise IndexError
 
-            def _mul(list1, list2):
-                tmp = 0
-                for element1, element2 in zip(list1, list2):
-                    tmp += element1*element2
-                return tmp
+            def _mul(arr1, arr2):
+                return sum([x*y for x, y in zip(arr1, arr2)])
 
-            temp = []
+            tmp = []
             mat2 = mat2.transpose
             for i in range(mat1.shape[0]):
                 for j in range(mat2.shape[0]):
-                    temp.append(_mul(mat1.array[i], mat2.array[j]))
-                result.append(temp)
-                temp = []
-            else:
-                return result
+                    tmp.append(_mul(mat1.array[i], mat2.array[j]))
+                result.append(tmp)
+                tmp = []
+            return result
 
         if isinstance(other, Matrix):
             return Matrix(mat_mul(self, other))
@@ -234,6 +262,36 @@ class Matrix(object):
         return self + (-other)
     __isub__ = __sub__
     __rsub__ = __sub__
+
+    def __truediv__(self, other):
+        """
+
+        :type other: int, float
+        """
+        return self*(1/other)
+    __itruediv__ = __truediv__
+
+    def __floordiv__(self, other):
+        """
+
+        :type other: int, float
+        """
+        return Matrix([[element//other for element in row] for row in self.array])
+    __ifloordiv__ = __floordiv__
+
+    def __mod__(self, other):
+        """
+
+        :type other: int, float
+        """
+        return Matrix([[element % other for element in row] for row in self.array])
+    __imod__ = __mod__
+
+    def __floor__(self):
+        return Matrix([[math.floor(element) for element in row] for row in self.array])
+
+    def __ceil__(self):
+        return Matrix([[math.ceil(element) for element in row] for row in self.array])
 
     def __pow__(self, power):
         if not isinstance(power, int):
@@ -292,7 +350,6 @@ class Matrix(object):
          [16.4 25 36]
          [53.9 64 81]]
         """
-
         if mat1.shape != mat2.shape:
             raise IndexError
 
@@ -310,8 +367,9 @@ class Matrix(object):
         """
 
         :rtype: Matrix
-        """
 
+        get transpose of the matrix
+        """
         if not self.array:
             return None
         t_array = [[row[j] for row in self.array] for j in range(self.shape[1])]
@@ -319,6 +377,13 @@ class Matrix(object):
 
     @staticmethod
     def _transform(array, row, identity=False):
+        """
+
+        :rtype: list, int
+
+        Transfer the matrix to a lower triangular matrix or a diagonal matrix according to the
+        arg identity.
+        """
         count = 0
         for j in range(row):
             for i in range(j+1, row):
@@ -344,6 +409,10 @@ class Matrix(object):
 
     @staticmethod
     def inv(mat):
+        """
+
+        To solve the inverse matrix of the given matrix.
+        """
         if mat.shape[0] != mat.shape[1]:
             raise IndexError
         if Matrix.det(mat) == 0:
@@ -371,7 +440,14 @@ class Matrix(object):
 
     @staticmethod
     def det(mat):
+        """
+
+        Solve the determinant of the square matrix.
+        """
         array = copy(mat.array)
+        # avoid changing the elements in the matrix.
+        # The reason of using copy instead of deepcopy is due to the function _transform.
+
         if mat.shape[0] != mat.shape[1]:
             raise IndexError
         if mat.shape[0] == mat.shape[1] == 0:
@@ -389,6 +465,12 @@ class Matrix(object):
 
     @property
     def rank(self):
+        """
+
+        Get the rank of the square matrix.
+        """
+        # TODO: check if there still exist bugs.
+
         if self.shape[0] != self.shape[1]:
             raise IndexError
 
@@ -431,7 +513,6 @@ class Matrix(object):
           [4 5 6]
           [7 8 9]]
         """
-
         if self.shape[0]*self.shape[1] != shape[0]*shape[1]:
             raise IndexError
 
@@ -449,6 +530,9 @@ class Matrix(object):
     def fill(self, value):
         """
 
+        Filling the matrix with the specific value.
+        This will change the matrix itself.
+
         >>> m = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m
         [[1 2 3]
@@ -460,16 +544,21 @@ class Matrix(object):
          [-1 -1 -1]
          [-1 -1 -1]]
         """
-
         for ind, element in enumerate(self):
             i, j = divmod(ind, self.shape[1])
             self.array[i][j] = value
 
     def flat(self):
+        """
+
+        Turn the matrix to a list and return a generator.
+        """
         return (x for x in self)
 
     def repeat(self, repeats, axis):
         """
+
+        Generate a matrix by repeating each row of the given matrix.
 
         >>> m = Matrix([[1, 2], [4, 5], [7, 8]])
         >>> m.repeat(2, 0)
@@ -490,9 +579,7 @@ class Matrix(object):
          [7 8]
          [7 8]
          [7 8]]
-
         """
-
         if isinstance(repeats, int):
             repeats = [repeats]*self.shape[0]
 
@@ -513,6 +600,8 @@ class Matrix(object):
         """
 
         :type reps: tuple, list
+
+        Generate a matrix by repeating the given matrix.
 
         >>> m = Matrix([[1, 2, 3], [2, 4, 6], [7, 8, 9]])
         >>> m.tile((2, 1))
@@ -537,7 +626,6 @@ class Matrix(object):
          [2 4 6]
          [7 8 9]]
         """
-
         array = deepcopy(self.array)
         for i in range(reps[0]-1):
             array += array
@@ -549,13 +637,21 @@ class Matrix(object):
 
     @classmethod
     def zero(cls, row=3, col=3):
+        """
+
+        Generate a matrix filled with 0.
+        """
         array = []
         for y in range(row):
             array.append([0]*col)
         return cls(array)
 
     @classmethod
-    def eye(cls, n=2):
+    def eye(cls, n):
+        """
+
+        Generate a identity matrix.
+        """
         mat = cls.zero(row=n, col=n)
         for i in range(n):
             mat.array[i][i] = 1
@@ -563,6 +659,10 @@ class Matrix(object):
 
     @classmethod
     def rand(cls, row, col):
+        """
+
+        Generate a matrix filled with random number whose range is from 0 to 1.
+        """
         random.seed(time.time())
         mat = cls.zero(row, col)
         for i in range(row):
@@ -584,12 +684,14 @@ class Matrix(object):
 
         :type index: tuple
         """
-
         return self.array[index[0]][index[1]]
 
     def max(self, axis=None):
         """
         :type axis: int
+
+        Get maximum of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.max()
@@ -601,18 +703,20 @@ class Matrix(object):
         >>> m0.max(1)
         [[7 8 9]]
         """
-
         if axis == 0:
             return Matrix([[max(row) for row in self.array]]).T
         elif axis == 1:
             return Matrix([[max(row) for row in self.transpose.array]])
-        else:
+        elif axis is None:
             return max(self)
 
     def min(self, axis=None):
         """
 
         :type axis: int
+
+        Get minimum of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.min()
@@ -624,18 +728,20 @@ class Matrix(object):
         >>> m0.min(1)
         [[1 2 3]]
         """
-
         if axis == 0:
             return Matrix([[min(row) for row in self.array]]).T
         elif axis == 1:
             return Matrix([[min(row) for row in self.transpose.array]])
-        else:
+        elif axis is None:
             return min(self)
 
     def mean(self, axis=None):
         """
 
         :type axis: int
+
+        Calculate the average of the elements of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.mean()
@@ -647,19 +753,21 @@ class Matrix(object):
         >>> m0.mean(1)
         [[4.0 5.0 6.0]]
         """
-
         element_num = self.shape[0]*self.shape[1]
         if axis == 0:
             return Matrix([[sum(row)/self.shape[1] for row in self.array]]).T
         elif axis == 1:
             return Matrix([[sum(row)/self.shape[0] for row in self.transpose.array]])
-        else:
+        elif axis is None:
             return sum([sum(row) for row in self.array])/element_num
 
     def var(self, axis=None):
         """
 
         :type axis: int
+
+        Solve the variance of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.var()
@@ -671,12 +779,11 @@ class Matrix(object):
         >>> m0.var(1)
         [[6.0 6.0 6.0]]
         """
-
         if axis == 0:
             return Matrix([[Matrix([row]).var() for row in self.array]]).T
         elif axis == 1:
             return self.transpose.var(0).T
-        else:
+        elif axis is None:
             average = self.mean()
             return Matrix([[(x - average)**2 for x in self]]).mean()
 
@@ -686,13 +793,13 @@ class Matrix(object):
         :type axis: int
 
         m0.std() is equal to m0.var()**0.5
+        The value of the axis decides how to calculate.
         """
-
         if axis is None:
             return self.var(axis)**0.5
         elif axis == 0:
             return Matrix([[x**0.5 for x in self.var(axis)]]).T
-        else:
+        elif axis == 1:
             return Matrix([[x**0.5 for x in self.var(axis)]])
 
     def sum(self, axis=None):
@@ -712,7 +819,6 @@ class Matrix(object):
         >>> m.sum(1)
         [[4.0 -8 10]]
         """
-
         if axis == 0:
             return Matrix([[sum(row) for row in self.array]]).T
         elif axis == 1:
@@ -722,6 +828,8 @@ class Matrix(object):
 
     def sort(self, axis=None, key=None, reverse=False):
         """
+
+        This function can sort the elements of the matrix, which will change the matrix itself.
 
         >>> m = Matrix([[1.0, 0, -3], [2, -5, 4], [1, -3, 9]])
         >>> m.sort()
@@ -755,7 +863,6 @@ class Matrix(object):
          [0 1.0 1]
          [2 4 9]]
         """
-
         if axis is None:
             shape = self.shape
             self.reshape((1, self.shape[0]*self.shape[1]))
@@ -775,13 +882,14 @@ class Matrix(object):
         """
         :type string: str
 
+        Generate the matrix from a string.
+
         >>> m = Matrix.from_string("1 2;3 4;5 6")
         >>> m
         [[1.0 2.0]
          [3.0 4.0]
          [5.0 6.0]]
         """
-
         if string[-1] == ';':
             string = string[: len(string)-1]
         if ',' in string:
@@ -803,6 +911,9 @@ class Matrix(object):
         :type array: iterable
         :type shape: tuple, list
 
+        Generate a matrix from a one-dimensional array.
+        List, tuple or generator is accepted.
+
         >>> m = Matrix.from_list([x for x in range(6)], (3, 2))
         >>> m
         [[0 1]
@@ -814,7 +925,6 @@ class Matrix(object):
          [2 3]
          [4 5]]
         """
-
         mat = cls([array])
         mat.reshape(shape)
         return mat
@@ -832,6 +942,8 @@ class Matrix(object):
 
     def to_string(self):
         """
+
+        Transfer the matrix to a string.
 
         >>> m = Matrix.from_string("1 2;3 4;5 6")
         >>> m .to_string()
@@ -863,15 +975,28 @@ class Matrix(object):
                 file.write(string)
 
     def mdump(self, filename):
+        """
+
+        Dump the matrix into a json file.
+        """
+        pattern = re.compile("..*\.json")
+        if not re.match(pattern, filename):
+            raise ValueError("invalid filename. json file expected.")
+
         json = dumps(self.array, indent='')
         with open(filename, 'w', encoding="UTF-8") as file:
             file.write(json)
 
     @classmethod
     def mload(cls, filename):
+        """
+
+        Load the data in a json file, and turn the data into the matrix.
+        """
         with open(filename, 'r', encoding="UTF-8") as file:
             return cls(load(fp=file))
 
     # The following is class attributes
     I = __solve_i
     T = transpose
+    print_all = False  # decide whether displaying the full matrix.
