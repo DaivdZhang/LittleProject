@@ -6,10 +6,11 @@ try:
     from simplejson import dumps, load
 except ImportError:
     from json import dumps, load
+import math
+import re
 
 
 class Matrix(object):
-    print_all = False # decide whether displaying the full matrix.
 
     def __init__(self, data=None):
         if data is None:
@@ -167,6 +168,38 @@ class Matrix(object):
         else:
             return True
 
+    def __gt__(self, other):
+        result = []
+        if self.shape == other.shape:
+            for x, y in zip(self, other):
+                if x > y:
+                    result.append(1)
+                else:
+                    result.append(0)
+        else:
+            raise IndexError
+        return Matrix.from_list(result, self.shape)
+
+    def __lt__(self, other):
+        _ = self >= other
+        return Matrix.from_list(map(lambda x: not x, _.flat()), self.shape)
+
+    def __ge__(self, other):
+        result = []
+        if self.shape == other.shape:
+            for x, y in zip(self, other):
+                if x >= y:
+                    result.append(1)
+                else:
+                    result.append(0)
+        else:
+            raise IndexError
+        return Matrix.from_list(result, self.shape)
+
+    def __le__(self, other):
+        _ = self > other
+        return Matrix.from_list(map(lambda x: not x, _.flat()), self.shape)
+
     def __pos__(self):
         return self
 
@@ -179,7 +212,7 @@ class Matrix(object):
 
     def __add__(self, other):
         if not isinstance(other, Matrix):
-            return NotImplemented
+            return Matrix([[element + other for element in row] for row in self.array])
         result = []
         if self.shape != other.shape:
             raise IndexError
@@ -229,6 +262,36 @@ class Matrix(object):
         return self + (-other)
     __isub__ = __sub__
     __rsub__ = __sub__
+
+    def __truediv__(self, other):
+        """
+
+        :type other: int, float
+        """
+        return self*(1/other)
+    __itruediv__ = __truediv__
+
+    def __floordiv__(self, other):
+        """
+
+        :type other: int, float
+        """
+        return Matrix([[element//other for element in row] for row in self.array])
+    __ifloordiv__ = __floordiv__
+
+    def __mod__(self, other):
+        """
+
+        :type other: int, float
+        """
+        return Matrix([[element % other for element in row] for row in self.array])
+    __imod__ = __mod__
+
+    def __floor__(self):
+        return Matrix([[math.floor(element) for element in row] for row in self.array])
+
+    def __ceil__(self):
+        return Matrix([[math.ceil(element) for element in row] for row in self.array])
 
     def __pow__(self, power):
         if not isinstance(power, int):
@@ -304,6 +367,8 @@ class Matrix(object):
         """
 
         :rtype: Matrix
+
+        get transpose of the matrix
         """
         if not self.array:
             return None
@@ -313,6 +378,8 @@ class Matrix(object):
     @staticmethod
     def _transform(array, row, identity=False):
         """
+
+        :rtype: list, int
 
         Transfer the matrix to a lower triangular matrix or a diagonal matrix according to the
         arg identity.
@@ -512,7 +579,6 @@ class Matrix(object):
          [7 8]
          [7 8]
          [7 8]]
-
         """
         if isinstance(repeats, int):
             repeats = [repeats]*self.shape[0]
@@ -624,6 +690,9 @@ class Matrix(object):
         """
         :type axis: int
 
+        Get maximum of the matrix.
+        The value of the axis decides how to calculate.
+
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.max()
         9
@@ -638,13 +707,16 @@ class Matrix(object):
             return Matrix([[max(row) for row in self.array]]).T
         elif axis == 1:
             return Matrix([[max(row) for row in self.transpose.array]])
-        else:
+        elif axis is None:
             return max(self)
 
     def min(self, axis=None):
         """
 
         :type axis: int
+
+        Get minimum of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.min()
@@ -660,7 +732,7 @@ class Matrix(object):
             return Matrix([[min(row) for row in self.array]]).T
         elif axis == 1:
             return Matrix([[min(row) for row in self.transpose.array]])
-        else:
+        elif axis is None:
             return min(self)
 
     def mean(self, axis=None):
@@ -669,6 +741,7 @@ class Matrix(object):
         :type axis: int
 
         Calculate the average of the elements of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.mean()
@@ -685,13 +758,16 @@ class Matrix(object):
             return Matrix([[sum(row)/self.shape[1] for row in self.array]]).T
         elif axis == 1:
             return Matrix([[sum(row)/self.shape[0] for row in self.transpose.array]])
-        else:
+        elif axis is None:
             return sum([sum(row) for row in self.array])/element_num
 
     def var(self, axis=None):
         """
 
         :type axis: int
+
+        Solve the variance of the matrix.
+        The value of the axis decides how to calculate.
 
         >>> m0 = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> m0.var()
@@ -707,7 +783,7 @@ class Matrix(object):
             return Matrix([[Matrix([row]).var() for row in self.array]]).T
         elif axis == 1:
             return self.transpose.var(0).T
-        else:
+        elif axis is None:
             average = self.mean()
             return Matrix([[(x - average)**2 for x in self]]).mean()
 
@@ -717,12 +793,13 @@ class Matrix(object):
         :type axis: int
 
         m0.std() is equal to m0.var()**0.5
+        The value of the axis decides how to calculate.
         """
         if axis is None:
             return self.var(axis)**0.5
         elif axis == 0:
             return Matrix([[x**0.5 for x in self.var(axis)]]).T
-        else:
+        elif axis == 1:
             return Matrix([[x**0.5 for x in self.var(axis)]])
 
     def sum(self, axis=None):
@@ -900,17 +977,26 @@ class Matrix(object):
     def mdump(self, filename):
         """
 
-        dump the matrix to a json file.
+        Dump the matrix into a json file.
         """
+        pattern = re.compile("..*\.json")
+        if not re.match(pattern, filename):
+            raise ValueError("invalid filename. json file expected.")
+
         json = dumps(self.array, indent='')
         with open(filename, 'w', encoding="UTF-8") as file:
             file.write(json)
 
     @classmethod
     def mload(cls, filename):
+        """
+
+        Load the data in a json file, and turn the data into the matrix.
+        """
         with open(filename, 'r', encoding="UTF-8") as file:
             return cls(load(fp=file))
 
     # The following is class attributes
     I = __solve_i
     T = transpose
+    print_all = False  # decide whether displaying the full matrix.
