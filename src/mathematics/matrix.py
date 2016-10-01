@@ -9,13 +9,15 @@ except ImportError:
 
 
 class Matrix(object):
+    print_all = False
+
     def __init__(self, array=None):
         if array is None:
             self.array = [[]]
         else:
-            if len(set([len(row) for row in array])) != 1:
-                raise IndexError
             self.array = [[element for element in row] for row in array]
+            if len(set([len(row) for row in self.array])) != 1:
+                raise IndexError
 
         self.shape = self._get_shape()
 
@@ -124,18 +126,23 @@ class Matrix(object):
 
     def __str__(self):
         string = []
-        for i, row in enumerate(self.array):
-            if self.shape[0] > 64 and 8 < i < self.shape[0] - 8:
-                continue
-            elif self.shape[0] > 64 and i == self.shape[0] - 8:
-                string.append("......")
-            else:
-                if self.shape[1] > 64:
-                    a = ' '.join(map(lambda x: str(x), row[0: 4]))
-                    b = ' '.join(map(lambda x: str(x), row[self.shape[1]-4:]))
-                    string.append('[' + a + "......" + b + ']')
+        if not Matrix.print_all:
+            for i, row in enumerate(self.array):
+                if self.shape[0] > 64 and 8 < i < self.shape[0] - 8:
+                    continue
+                elif self.shape[0] > 64 and i == self.shape[0] - 8:
+                    string.append("......")
                 else:
-                    string.append('[' + ' '.join(map(lambda x: str(x), row))+']')
+                    if self.shape[1] > 64:
+                        a = ' '.join(map(str, row[0: 4]))
+                        b = ' '.join(map(str, row[self.shape[1]-4:]))
+                        string.append('[' + a + "......" + b + ']')
+                    else:
+                        string.append('[' + ' '.join(map(str, row))+']')
+        else:
+            for row in self.array:
+                string.append('[' + ' '.join(map(str, row)) + ']')
+
         return '[' + "\n ".join(string) + "]\n"
 
     def __repr__(self):
@@ -453,10 +460,13 @@ class Matrix(object):
          [-1 -1 -1]
          [-1 -1 -1]]
         """
-        
+
         for ind, element in enumerate(self):
             i, j = divmod(ind, self.shape[1])
             self.array[i][j] = value
+
+    def flat(self):
+        return (x for x in self)
 
     def repeat(self, repeats, axis):
         """
@@ -482,7 +492,7 @@ class Matrix(object):
          [7 8]]
 
         """
-        
+
         if isinstance(repeats, int):
             repeats = [repeats]*self.shape[0]
 
@@ -497,6 +507,44 @@ class Matrix(object):
         mat = Matrix(new_arr)
         del new_arr
 
+        return mat
+
+    def tile(self, reps):
+        """
+
+        :type reps: tuple, list
+
+        >>> m = Matrix([[1, 2, 3], [2, 4, 6], [7, 8, 9]])
+        >>> m.tile((2, 1))
+        [[1 2 3]
+         [2 4 6]
+         [7 8 9]
+         [1 2 3]
+         [2 4 6]
+         [7 8 9]]
+        >>> m.tile((1, 2))
+        [[1 2 3 1 2 3]
+         [2 4 6 2 4 6]
+         [7 8 9 7 8 9]]
+        >>> m.tile((1, 0))
+        [[]]
+        >>> m.tile((0, 2))
+        [[1 2 3 1 2 3]
+         [2 4 6 2 4 6]
+         [7 8 9 7 8 9]]
+        >>> m.tile((0, 1))
+        [[1 2 3]
+         [2 4 6]
+         [7 8 9]]
+        """
+
+        array = deepcopy(self.array)
+        for i in range(reps[0]-1):
+            array += array
+        mat = Matrix(array)
+        if reps[1] == 0:
+            return Matrix()
+        mat = mat.repeat(reps[1], 1)
         return mat
 
     @classmethod
@@ -520,32 +568,6 @@ class Matrix(object):
         for i in range(row):
             mat.array[i] = [element + random.random() for element in mat.array[i]]
         return mat
-
-    @classmethod
-    def from_string(cls, string):
-        """
-        :type string: str
-
-        >>> m = Matrix.from_string("1 2;3 4;5 6")
-        >>> m
-        [[1.0 2.0]
-         [3.0 4.0]
-         [5.0 6.0]]
-        """
-        
-        if string[-1] == ';':
-            string = string[: len(string)-1]
-        if ',' in string:
-            string = string.replace(',', ' ')
-
-        row_string = string.split(';')
-        array = [row.split(' ') for row in row_string]
-
-        def _not_empty(x):
-            return x.strip() and x
-        array = [filter(_not_empty, row) for row in array]
-        array = [[float(x) for x in row] for row in array]
-        return Matrix(array)
 
     def index(self, x, total=False):
         indexes = []
@@ -673,15 +695,182 @@ class Matrix(object):
         else:
             return Matrix([[x**0.5 for x in self.var(axis)]])
 
+    def sum(self, axis=None):
+        """
+
+        >>> m = Matrix([[1.0, 0, -3], [2, -5, 4], [1, -3, 9]])
+        >>> m
+        [[1.0 0 -3]
+         [2 -5 4]
+         [1 -3 9]]
+        >>> m.sum()
+        6.0
+        >>> m.sum(0)
+        [[-2.0]
+         [1]
+         [7]]
+        >>> m.sum(1)
+        [[4.0 -8 10]]
+        """
+
+        if axis == 0:
+            return Matrix([[sum(row) for row in self.array]]).T
+        elif axis == 1:
+            return Matrix([[sum(row) for row in self.transpose.array]])
+        elif axis is None:
+            return sum([sum(row) for row in self.array])
+
+    def sort(self, axis=None, key=None, reverse=False):
+        """
+
+        >>> m = Matrix([[1.0, 0, -3], [2, -5, 4], [1, -3, 9]])
+        >>> m.sort()
+        >>> m
+        [[-5 -3 -3]
+         [0 1.0 1]
+         [2 4 9]]
+        >>> m.sort(axis=0)
+        >>> m
+        [[-5 -3 -3]
+         [0 1.0 1]
+         [2 4 9]]
+        >>> m.sort(axis=1)
+        >>> m
+        [[-5 -3 -3]
+         [0 1.0 1]
+         [2 4 9]]
+        >>> m.sort(axis=0, key=abs)
+        >>> m
+        [[-3 -3 -5]
+         [0 1.0 1]
+         [2 4 9]]
+        >>> m.sort(axis=0, key=abs, reverse=True)
+        >>> m
+        [[-5 -3 -3]
+         [1.0 1 0]
+         [9 4 2]]
+        >>> m.sort(axis=0, key=lambda x: x**3)
+        >>> m
+        [[-5 -3 -3]
+         [0 1.0 1]
+         [2 4 9]]
+        """
+
+        if axis is None:
+            shape = self.shape
+            self.reshape((1, self.shape[0]*self.shape[1]))
+            self.array[0].sort(key=key, reverse=reverse)
+            self.reshape(shape)
+        elif axis == 0:
+            for row in self.array:
+                row.sort(key=key, reverse=reverse)
+        elif axis == 1:
+            mat = self.transpose
+            for row in mat.array:
+                row.sort(key=key, reverse=reverse)
+            self.array = mat.transpose.array
+
+    @classmethod
+    def from_string(cls, string):
+        """
+        :type string: str
+
+        >>> m = Matrix.from_string("1 2;3 4;5 6")
+        >>> m
+        [[1.0 2.0]
+         [3.0 4.0]
+         [5.0 6.0]]
+        """
+
+        if string[-1] == ';':
+            string = string[: len(string)-1]
+        if ',' in string:
+            string = string.replace(',', ' ')
+
+        row_string = string.split(';')
+        array = [row.split(' ') for row in row_string]
+
+        def _not_empty(x):
+            return x.strip() and x
+        array = [filter(_not_empty, row) for row in array]
+        array = [[float(x) for x in row] for row in array]
+        return Matrix(array)
+
+    @classmethod
+    def from_list(cls, array, shape):
+        """
+
+        :type array: iterable
+        :type shape: tuple, list
+
+        >>> m = Matrix.from_list([x for x in range(6)], (3, 2))
+        >>> m
+        [[0 1]
+         [2 3]
+         [4 5]]
+        >>> m = Matrix.from_list((x for x in range(6)), (3, 2))
+        >>> m
+        [[0 1]
+         [2 3]
+         [4 5]]
+        """
+
+        mat = cls([array])
+        mat.reshape(shape)
+        return mat
+
+    @classmethod
+    def from_file(cls, filename):
+        i = filename.index('.')
+        if filename[i+1:] == "json":
+            return cls.mload(filename)
+        elif filename[i+1:] == "txt":
+            with open(filename, 'r', encoding="UTF-8") as file:
+                strings = file.readlines()
+                string = ''.join(map(str.strip, strings))
+            return cls.from_string(string)
+
+    def to_string(self):
+        """
+
+        >>> m = Matrix.from_string("1 2;3 4;5 6")
+        >>> m .to_string()
+        '1.0 2.0;3.0 4.0;5.0 6.0'
+        """
+        string = []
+        for row in self.array:
+            string.append(' '.join(map(str, row)))
+        return ';'.join(string)
+
+    def to_list(self):
+        return self.array
+
+    def to_file(self, filename: str, mode='J'):
+        if '.' in filename:
+            i = filename.index('.')
+            if mode == 'J':
+                filename = filename[: i] + ".json"
+            elif mode == 'T':
+                filename = filename[: i] + ".txt"
+
+        if mode == 'J':
+            self.mdump(filename)
+        elif mode == 'T':
+            string = self.to_string()
+            strings = string.split(';')
+            string = ";\n".join(strings) + '\n'
+            with open(filename, 'w', encoding="UTF-8") as file:
+                file.write(string)
+
     def mdump(self, filename):
         json = dumps(self.array, indent='')
         with open(filename, 'w', encoding="UTF-8") as file:
             file.write(json)
 
-    @staticmethod
-    def mload(filename):
+    @classmethod
+    def mload(cls, filename):
         with open(filename, 'r', encoding="UTF-8") as file:
-            return Matrix(load(fp=file))
+            return cls(load(fp=file))
 
     # The following is class attributes
     I = __solve_i
