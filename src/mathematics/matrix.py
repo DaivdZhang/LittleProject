@@ -1,7 +1,8 @@
 import random
 import time
 from functools import reduce
-from copy import copy, deepcopy
+from copy import copy as _copy
+from copy import deepcopy as _deepcopy
 try:
     from simplejson import dumps, load
 except ImportError:
@@ -319,7 +320,7 @@ class Matrix(object):
         new_mat = cls()
         memodict[id(self)] = new_mat
         for key, item in self.__dict__.items():
-            setattr(new_mat, key, deepcopy(item, memodict))
+            setattr(new_mat, key, _deepcopy(item, memodict))
         return new_mat
 
     def copy(self):
@@ -388,14 +389,18 @@ class Matrix(object):
         for j in range(row):
             for i in range(j+1, row):
                 if not array[j][j]:
-                    _ = [x for x in range(i, row) if array[x][j]].pop(0)
+                    _ = [x for x in range(i, row) if array[x][j]]
+                    if _:
+                        _ = _.pop(0)
+                    else:
+                        return array, count
                     array[j], array[_] = array[_], array[j]
                     count += 1
                 try:
                     k = array[i][j]/array[j][j]
                 except ZeroDivisionError:
                     if len(set(array[j])) == 1:
-                        return 0, count
+                        return array, count
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
 
         if identity:
@@ -420,7 +425,7 @@ class Matrix(object):
         if not mat:
             return mat
 
-        array = deepcopy(mat.array)
+        array = _deepcopy(mat.array)
         e = Matrix.eye(mat.shape[0])
         for i, row in enumerate(array):
             row.extend(e.array[i])
@@ -444,7 +449,7 @@ class Matrix(object):
 
         Solve the determinant of the square matrix.
         """
-        array = copy(mat.array)
+        array = _copy(mat.array)
         # avoid changing the elements in the matrix.
         # The reason of using copy instead of deepcopy is due to the function _transform.
 
@@ -626,7 +631,7 @@ class Matrix(object):
          [2 4 6]
          [7 8 9]]
         """
-        array = deepcopy(self.array)
+        array = _deepcopy(self.array)
         for i in range(reps[0]-1):
             array += array
         mat = Matrix(array)
