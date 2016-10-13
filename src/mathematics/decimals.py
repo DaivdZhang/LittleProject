@@ -1,11 +1,13 @@
 from copy import deepcopy as _deepcopy
 
 
-# TODO: to finish the function: __truediv__, __floordiv__
 # TODO: add other features
 # TODO: debug
 
-def from_string(string):
+__all__ = ["Decimal"]
+
+
+def _from_string(string):
     n = string
     if '-' in string:
         n = n.replace('-', '')
@@ -17,14 +19,16 @@ def from_string(string):
         i, d = n.split('.')
         if d[-1] == '0':
             tmp = [x for x in d]
-            for _ in tmp[::-1]:
-                if _ == '0':
+            for ind, _ in enumerate(tmp[::-1]):
+                if _ == '0' and ind != len(tmp) - 1:
                     tmp.pop()
                 else:
                     break
             d = "".join(tmp)
     else:
         i, d = n, '0'
+    if i == d == '0':
+        neg = False
     return neg, i, d
 
 
@@ -78,7 +82,7 @@ def _sub(a, b):
 class Decimal(object):
     def __init__(self, num=None):
         try:
-            self.neg, self.int_part, self.dec_part = from_string(num)
+            self.neg, self.int_part, self.dec_part = _from_string(num)
         except TypeError:
             self.neg, self.int_part, self.dec_part = False, '0', '0'
 
@@ -90,6 +94,9 @@ class Decimal(object):
         else:
             return "Decimal(-" + self.int_part + '.' + self.dec_part + ')'
     __repr__ = __str__
+
+    def __int__(self):
+        return int(self.int_part)
 
     def __eq__(self, other):
         if self.int_part == other.int_part and self.dec_part == other.dec_part:
@@ -107,18 +114,8 @@ class Decimal(object):
             return True
 
     def __lt__(self, other):
-        if self.neg is True and other.neg is not True:
-            return True
-        elif self.neg is not True and other.neg is True:
-            return False
-        if int(self.int_part) < int(other.int_part):
-            return True
-        elif int(self.int_part) > int(other.int_part):
-            return False
-        if self.dec_part < other.dec_part:
-            return True
-        else:
-            return False
+        result = self - other
+        return result.neg
 
     def __le__(self, other):
         if self < other or self == other:
@@ -133,7 +130,7 @@ class Decimal(object):
             return True
 
     def __ge__(self, other):
-        if self <= other:
+        if self < other:
             return False
         else:
             return True
@@ -176,16 +173,35 @@ class Decimal(object):
         x = str(x*y)[:: -1]
         x, y = x[self.digits + other.digits:], x[0: self.digits + other.digits]
         x, y = x[::-1], y[::-1]
-
+        if x == '':
+            x = '0'
+        if self.neg != other.neg:
+            x = '-' + x
         return Decimal(x + '.' + y)
     __rmul__ = __mul__
     __imul__ = __mul__
 
     def __truediv__(self, other):
-        pass
+        x = int(self.int_part + self.dec_part)
+        y = int(other.int_part + other.dec_part)
+        _ = abs(self.digits - other.digits)
+        if self.digits > other.digits:
+            y *= 10**_
+        elif self.digits < other.digits:
+            x *= 10**_
+        i, x = divmod(x, y)
+        x *= 10**(len(str(y)) - len(str(x)))
+        f, x = divmod(x, y)
+        if self.neg != other.neg:
+            i = '-' + str(i)
+        return Decimal(str(i) + '.' + str(f))
+    __rtruediv__ = __truediv__
+    __itruediv__ = __truediv__
 
     def __floordiv__(self, other):
-        pass
+        return int(self/other)
+    __rfloordiv__ = __floordiv__
+    __ifloordiv__ = __floordiv__
 
     def __copy__(self):
         cls = self.__class__
