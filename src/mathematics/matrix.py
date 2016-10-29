@@ -39,11 +39,11 @@ class Matrix(object):
         >>> m[2, 1]
         6.0
         """
-        if isinstance(item[0], int):
-            return self.get(item)
-        else:
-            array = [[element for element in row[item[1]]] for row in self.array[item[0]]]
-            return Matrix(array)
+        ret = self.get(item)
+        try:
+            return Matrix(ret)
+        except TypeError:
+            return ret
 
     def __setitem__(self, key, value):
         """
@@ -70,9 +70,7 @@ class Matrix(object):
              [4.1 5 6]
              [7.7 8 9]]
         """
-        if isinstance(key[0], int):
-            self.array[key[0]][key[1]] = value
-        else:
+        try:
             col_range = [key[1].start, key[1].stop]
             if key[1].start is None:
                 col_range[0] = 0
@@ -84,6 +82,8 @@ class Matrix(object):
                 del row[key[1]]
                 for j in range(col_range[0], col_range[1]):
                     row.insert(j, value[i][j])
+        except AttributeError:
+            self.array[key[0]][key[1]] = value
 
     def __contains__(self, item):
         for row in self.array:
@@ -212,19 +212,19 @@ class Matrix(object):
         return Matrix(array)
 
     def __add__(self, other):
-        if not isinstance(other, Matrix):
-            return Matrix([[element + other for element in row] for row in self.array])
-        result = []
         if self.shape != other.shape:
-            raise IndexError
-
-        tmp = []
-        for row1, row2 in zip(self.array, other.array):
-            for element1, element2 in zip(row1, row2):
-                tmp.append(element1 + element2)
-            result.append(tmp)
+            raise IndexError("two mats don't have the same shape.")
+        try:
+            result = []
             tmp = []
-        return Matrix(result)
+            for row1, row2 in zip(self.array, other.array):
+                for element1, element2 in zip(row1, row2):
+                    tmp.append(element1 + element2)
+                result.append(tmp)
+                tmp = []
+            return Matrix(result)
+        except AttributeError:
+            return Matrix([[element + other for element in row] for row in self.array])
     __iadd__ = __add__
     __radd__ = __add__
 
@@ -252,9 +252,9 @@ class Matrix(object):
                 tmp = []
             return result
 
-        if isinstance(other, Matrix):
+        try:
             return Matrix(mat_mul(self, other))
-        else:
+        except AttributeError:
             return Matrix(num_mul(self, other))
     __imul__ = __mul__
     __rmul__ = __mul__
@@ -269,7 +269,10 @@ class Matrix(object):
 
         :type other: int, float
         """
-        return self*(1/other)
+        try:
+            return (1/other)*self
+        except AttributeError:
+            AttributeError("num type expected not {0}".format(type(other)))
     __itruediv__ = __truediv__
 
     def __floordiv__(self, other):
@@ -295,15 +298,16 @@ class Matrix(object):
         return Matrix([[math.ceil(element) for element in row] for row in self.array])
 
     def __pow__(self, power):
-        if not isinstance(power, int):
-            raise ValueError
         if self.shape[0] != self.shape[1]:
-            raise IndexError
+            raise IndexError("square matrix expected")
 
         m = Matrix.eye(self.shape[0])
-        for i in range(power):
-            m *= self
-        return m
+        try:
+            for i in range(power):
+                m *= self
+            return m
+        except TypeError:
+            raise TypeError("<class 'int'> expected got {0}".format(type(power)))
     __ipow__ = __pow__
 
     def __copy__(self):
@@ -352,7 +356,7 @@ class Matrix(object):
          [53.9 64 81]]
         """
         if mat1.shape != mat2.shape:
-            raise IndexError
+            raise IndexError("two mats don't have the same shape")
 
         result = []
         tmp = []
@@ -419,7 +423,7 @@ class Matrix(object):
         To solve the inverse matrix of the given matrix.
         """
         if mat.shape[0] != mat.shape[1]:
-            raise IndexError
+            raise IndexError("square matrix expected")
         if Matrix.det(mat) == 0:
             return None
         if not mat:
@@ -465,7 +469,7 @@ class Matrix(object):
     @property
     def trace(self):
         if self.shape[0] != self.shape[1]:
-            raise IndexError
+            raise IndexError("square matrix expected")
         return sum([row[i] for i, row in enumerate(self.array)])
 
     @property
@@ -477,7 +481,7 @@ class Matrix(object):
         # TODO: check if there still exist bugs.
 
         if self.shape[0] != self.shape[1]:
-            raise IndexError
+            raise IndexError("square matrix expected")
 
         array = Matrix._transform(self.array, self.shape[0])[0]
         count = 0
