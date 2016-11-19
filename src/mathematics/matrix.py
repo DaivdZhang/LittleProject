@@ -11,18 +11,35 @@ import math
 import re
 
 
+def _from_string(string):
+    if string[-1] == ';':
+        string = string[: len(string) - 1]
+    if ',' in string:
+        string = string.replace(',', ' ')
+
+    row_string = string.split(';')
+    array = [row.split(' ') for row in row_string]
+
+    def _not_empty(x):
+        return x.strip() and x
+
+    array = [filter(_not_empty, row) for row in array]
+    array = [[float(x) for x in row] for row in array]
+    return array
+
+
 class Matrix(object):
 
     def __init__(self, data=None):
         if data is None:
             self.array = [[]]
-        elif isinstance(data, str):
-            self.array = Matrix.from_string(data).array
         else:
-            self.array = [[element for element in row] for row in data]
-            if len(set([len(row) for row in self.array])) != 1:
-                raise IndexError
-
+            try:
+                self.array = Matrix.from_string(data).array
+            except AttributeError:
+                self.array = [[element for element in row] for row in data]
+                if len(set([len(row) for row in self.array])) != 1:
+                    raise IndexError
         self.shape = self._get_shape()
 
     def __getitem__(self, item):
@@ -359,12 +376,9 @@ class Matrix(object):
             raise IndexError("two mats don't have the same shape")
 
         result = []
-        tmp = []
         for row1, row2 in zip(mat1.array, mat2.array):
-            for element1, element2 in zip(row1, row2):
-                tmp.append(element1*element2)
+            tmp = [element1*element2 for element1, element2 in zip(row1, row2)]
             result.append(tmp)
-            tmp = []
         return Matrix(result)
 
     @property
@@ -400,11 +414,7 @@ class Matrix(object):
                         return array, count
                     array[j], array[_] = array[_], array[j]
                     count += 1
-                try:
-                    k = array[i][j]/array[j][j]
-                except ZeroDivisionError:
-                    if len(set(array[j])) == 1:
-                        return array, count
+                k = array[i][j]/array[j][j]
                 array[i] = list(map(lambda x, y: y - k*x, array[j], array[i]))
 
         if identity:
@@ -650,9 +660,7 @@ class Matrix(object):
 
         Generate a matrix filled with 0.
         """
-        array = []
-        for y in range(row):
-            array.append([0]*col)
+        array = [[0]*col]*row
         return cls(array)
 
     @classmethod
@@ -679,10 +687,8 @@ class Matrix(object):
         return mat
 
     def index(self, x, total=False):
-        indexes = []
-        for i, element in enumerate(self):
-            if element == x:
-                indexes.append(divmod(i, self.shape[1]))
+        col = self.shape[1]
+        indexes = [divmod(i, col) for i, element in enumerate(self) if element == x]
         if total:
             return indexes
         else:
@@ -899,18 +905,7 @@ class Matrix(object):
          [3.0 4.0]
          [5.0 6.0]]
         """
-        if string[-1] == ';':
-            string = string[: len(string)-1]
-        if ',' in string:
-            string = string.replace(',', ' ')
-
-        row_string = string.split(';')
-        array = [row.split(' ') for row in row_string]
-
-        def _not_empty(x):
-            return x.strip() and x
-        array = [filter(_not_empty, row) for row in array]
-        array = [[float(x) for x in row] for row in array]
+        array = _from_string(string)
         return Matrix(array)
 
     @classmethod
