@@ -108,9 +108,7 @@ def evaluate(x, env):
         exp = consequent if evaluate(test, env) else alt
         return evaluate(exp, env)
     elif x[0] == "cond":
-        print(x)
         _, *clause = x
-        print(clause)
         for i in clause:
             if evaluate(i[0], env):
                 return evaluate(i[1], env)
