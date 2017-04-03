@@ -32,11 +32,11 @@ def parse(text):
 def evaluate(ast):
     tape = Tape()
     p = 0
-    psw = 0
+    pc = 0
     ast_length = len(ast)
 
-    while psw < ast_length:
-        token = ast[psw]
+    while pc < ast_length:
+        token = ast[pc]
         if token == '>':
             tape.move(1)
         elif token == '<':
@@ -50,12 +50,23 @@ def evaluate(ast):
         elif token == '.':
             print(chr(tape.get()), end='')
         elif token == '[':
-            p = psw
+            p = pc
             if not tape.tape[tape.index]:
-                while ast[psw] != ']':
-                    psw += 1
+                while ast[pc] != ']':
+                    pc += 1
         elif token == ']':
             if tape.tape[tape.index]:
-                psw = p + 1
+                pc = p + 1
                 continue
-        psw += 1
+        pc += 1
+
+if __name__ == "__main__":
+    while True:
+        program = input("bfpy> ")
+        try:
+            if program != "exit":
+                evaluate(parse(program))
+            else:
+                break
+        except KeyboardInterrupt:
+            exit(0)
