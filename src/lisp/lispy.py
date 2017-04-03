@@ -67,16 +67,23 @@ def read_from_token(token):
         ast = []
     sub_ast = ast
     table = {0: sub_ast}
+    stack = []
     depth = 0
 
-    while len(token) != 0:
+    while len(token):
         element = token.pop(0)
         if element == '(':
             sub_ast.append([])
             sub_ast = sub_ast[-1]
             depth += 1
             table.update({depth: sub_ast})
+            stack.append('(')
         elif element == ')':
+            try:
+                stack.pop()
+            except IndexError:
+                raise SyntaxError("unexpected ')'")
+
             depth -= 1
             sub_ast = table[depth]
         else:
@@ -143,6 +150,9 @@ if __name__ == "__main__":
         expression = input("lispy> ")
         if expression == "exit":
             break
-        value = evaluate(parse(expression), global_env)
-        if value is not None:
-            print("> %s" % value)
+        try:
+            value = evaluate(parse(expression), global_env)
+            if value is not None:
+                print("> %s" % value)
+        except Exception as e:
+            print(e)
