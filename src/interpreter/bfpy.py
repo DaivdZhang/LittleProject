@@ -24,48 +24,62 @@ class Tape(object):
         return self.tape[self.index]
 
 
+class VMachine(object):
+    def __init__(self):
+        self.pc = 0
+        self.stack = []
+        self.mem = Tape()
+        self.mp = self.mem.index
+        self.program = None
+
+    def send(self, string):
+        self.program = string
+
+    def run(self):
+        tokens = parse(self.program)
+        tokens_length = len(tokens)
+
+        while self.pc < tokens_length:
+            token = tokens[self.pc]
+
+            if token == '>':
+                self.mem.move(1)
+            elif token == '<':
+                self.mem.move(-1)
+            elif token == '+':
+                self.mem.inc()
+            elif token == '-':
+                self.mem.dec()
+            elif token == ',':
+                self.mem.set(ord(input()))
+            elif token == '.':
+                print(chr(self.mem.get()), end='')
+            elif token == '[':
+                self.stack.append(self.pc)
+                if not self.mem.tape[self.mp]:
+                    while tokens[self.pc] != ']':
+                        self.pc += 1
+            elif token == ']':
+                if self.mem.tape[self.mp]:
+                    self.pc = self.stack[-1]
+                else:
+                    self.stack.pop()
+            self.pc += 1
+
+
 def parse(text):
     token_set = {'>', '<', '+', '-', ',', '.', '[', ']'}
     return [x for x in text if x in token_set]
 
 
-def evaluate(ast):
-    tape = Tape()
-    p = 0
-    pc = 0
-    ast_length = len(ast)
-
-    while pc < ast_length:
-        token = ast[pc]
-        if token == '>':
-            tape.move(1)
-        elif token == '<':
-            tape.move(-1)
-        elif token == '+':
-            tape.inc()
-        elif token == '-':
-            tape.dec()
-        elif token == ',':
-            tape.set(ord(input()))
-        elif token == '.':
-            print(chr(tape.get()), end='')
-        elif token == '[':
-            p = pc
-            if not tape.tape[tape.index]:
-                while ast[pc] != ']':
-                    pc += 1
-        elif token == ']':
-            if tape.tape[tape.index]:
-                pc = p + 1
-                continue
-        pc += 1
-
 if __name__ == "__main__":
+    vm = VMachine()
     while True:
-        program = input("bfpy> ")
         try:
+            program = input("bfpy> ")
             if program != "exit":
-                evaluate(parse(program))
+                vm.send(program)
+                vm.run()
             else:
                 break
         except KeyboardInterrupt:
