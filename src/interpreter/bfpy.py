@@ -29,10 +29,9 @@ class VMachine(object):
         self.pc = 0
         self.stack = []
         self.mem = Tape()
-        self.mp = self.mem.index
         self.program = None
 
-    def send(self, string):
+    def initialize(self, string):
         self.program = string
 
     def run(self):
@@ -56,11 +55,11 @@ class VMachine(object):
                 print(chr(self.mem.get()), end='')
             elif token == '[':
                 self.stack.append(self.pc)
-                if not self.mem.tape[self.mp]:
+                if not self.mem.tape[self.mem.index]:
                     while tokens[self.pc] != ']':
                         self.pc += 1
             elif token == ']':
-                if self.mem.tape[self.mp]:
+                if self.mem.tape[self.mem.index]:
                     self.pc = self.stack[-1]
                 else:
                     self.stack.pop()
@@ -78,7 +77,7 @@ if __name__ == "__main__":
         try:
             program = input("bfpy> ")
             if program != "exit":
-                vm.send(program)
+                vm.initialize(program)
                 vm.run()
             else:
                 break
